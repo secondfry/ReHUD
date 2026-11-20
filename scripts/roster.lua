@@ -4,12 +4,13 @@ local Roster = {}
 
 local numberOf, nextNumber = {}, 0 -- character number by key, and the next free one
 local MAX_NUMBER = 63 -- sanity cap for saved character and group numbers, far above any real roster
+-- shortcut: a run with 64+ characters has the later ones refused on restore, so their items go to player 0; raise the cap if that gets reported.
 -- A player group is one human: Jacob & Esau, both Tainted Lazarus forms and an Esau Jr. form share their human's ControllerIndex (keyboard -2 reads as 4294967294).
 -- Groups are numbered first seen like characters; groupFor maps a ControllerIndex to its group and is relearned from present characters after a continue.
 local groupOf, groupFor, nextGroup = {}, {}, 0
 
 -- Tainted Lazarus's Flip and Esau Jr. put another character (own seed) at the same GetPlayer index and store the old one: that character's items are frozen like a ghost's, and shown, rather than marked as left.
--- shortcut: a swapped-out character whose active partner later leaves the run stays frozen forever; drop it with its partner if that gets reported.
+-- When a player leaves, the player's swapped-out forms leave too: nobody is left to swap them back (see Roster.markLeft).
 local swapped, keyAt, lastPlayers = {}, {}, 0 -- swapped-out keys; key by GetPlayer index and player count at the last observe
 local left = {} -- keys of players who left the run; their items stay, hidden unless the menu shows them
 
@@ -67,7 +68,11 @@ function Roster.observe(players)
 		groupFor[controller] = groupFor[controller] or groupOf[p.key]
 		now[p.index] = p.key
 	end
+	local before = keyAt
 	keyAt, lastPlayers = now, #players
+	for _, old in pairs(before) do
+		if not byKey[old] and not swapped[old] then Roster.markLeft(old) end -- also catches a leaver without items
+	end
 	return byKey
 end
 
@@ -83,9 +88,17 @@ function Roster.isSwapped(key)
 	return swapped[key] == true
 end
 
--- A known character no longer passed and not swapped out has left the run.
+-- A known character no longer passed and not swapped out has left the run. With no character of the same player still present,
+-- that player's swapped-out forms leave too.
 function Roster.markLeft(key)
 	left[key] = true
+	local group = groupOf[key]
+	for _, present in pairs(keyAt) do
+		if groupOf[present] == group then return end
+	end
+	for other in pairs(swapped) do
+		if groupOf[other] == group then swapped[other], left[other] = nil, true end
+	end
 end
 
 function Roster.isLeft(key)
