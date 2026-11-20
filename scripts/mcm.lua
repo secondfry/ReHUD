@@ -81,6 +81,8 @@ function Mcm.register(config)
 	addBoolean(config, "showActive", "Show active items: ")
 	addBoolean(config, "showTemporary", "Show temporary items: ", false,
 		"Optional: also list items you only hold temporarily, e.g. from Lemegeton wisps, Zodiac or 3 Dollar Bill.")
+	addBoolean(config, "showLeft", "Show items of players who left: ", false,
+		"Optional: keep listing the items of co-op players who left the run.")
 end
 
 return Mcm
