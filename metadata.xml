@@ -3,12 +3,9 @@
     <name>[REP+] reHUD [Forked]</name>
     <directory>rehud_repplus</directory>
     <id>3843066104</id>
-    <description>Requires Repentance+.
-A Repentance+ port of [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1906405707]reHUD[/url] by wofsauge.
-Adds a more customizable smaller version of the &quot;Extra HUD&quot;, which displays the gametime and a list of collected items on the screen.
+    <description>Fork of [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1906405707]reHUD[/url] by wofsauge updated to Repentance+. Obviously use only one of two.
 
-[h1][b]Disable or unsubscribe the original reHUD when using this fork![/b][/h1]
-Only one of the two runs when both are enabled.
+Adds a more customizable smaller version of the "Extra HUD", which displays the gametime and a list of collected items on the screen.
 
 [h1]What this fork changes[/h1]
 - [b]Runs on Repentance+[/b]. The original targets Afterbirth+.
@@ -19,13 +16,12 @@ Only one of the two runs when both are enabled.
 - [b]New filters[/b]: active items, and temporary items (Lemegeton wisps, Zodiac, 3 Dollar Bill), which are marked with a small clock.
 - [b]Timer[/b] shows hundredths of a second.
 
-[h1][b]Disable &quot;Extra HUD&quot; in the Options menu when using this mod [/b][/h1]
-
-
-[h1]You need [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]&quot;Mod Config Menu Impure&quot;[/url] to customize this mod![/h1]
-
-[b]This mod does [u]not[/u] disable achievements![/b]
-
+[h1]Features of original[/h1]
+- [b]Display your last collected items on the screen[/b]. over 100 of them instead of the last 10 in the normal game.
+- [b]Customize the display[/b]: Position (Right, Bottom), Amount of Coloumns, Size, Transparency,..
+- [b]Display a more accurate ingame Timer![/b] Precise up to milliseconds ;)
+- [b]Filter your items[/b]. Display Passives or only Familiars.
+- [b]Sort your items[/b]. Order them by the floor they are collected on. 
 
 [h1]Support[/h1]
 Bugs, questions, ideas: [url=https://discord.gg/5KvKaUpsvR]Discord[/url]
@@ -37,7 +33,7 @@ to Skojanza for helping bugfix the original mod
 to _Kilburn for the screen-size helper in the original mod
 
 [h1]Original description (Afterbirth+)[/h1]
-[spoiler]Adds a more customizable smaller version of the &quot;Extra Hud&quot;, which displays the gametime and a list of collected items on the screen.
+[spoiler]Adds a more customizable smaller version of the "Extra Hud", which displays the gametime and a list of collected items on the screen.
 
 [h1]Features[/h1]
 - [b]Display your last collected items on the screen[/b]. over 100 of them instead of the last 10 in the normal game
@@ -46,10 +42,10 @@ to _Kilburn for the screen-size helper in the original mod
 - [b]Filter your items[/b]. Display Passives or only Familiars.
 - [b]Sort your items[/b]. Order them by the floor they are collected on. 
 
-[h1][b]Disable &quot;Extra HUD&quot; in the Options menu when using this mod [/b][/h1]
+[h1][b]Disable "Extra HUD" in the Options menu when using this mod [/b][/h1]
 
 
-[h1]You need [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1603631350]&quot;Mod config Menu&quot;[/url] to customize this mod![/h1]
+[h1]You need [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1603631350]"Mod config Menu"[/url] to customize this mod![/h1]
 
 [b]This mod does [u]not[/u] disable achievements![/b]
 
