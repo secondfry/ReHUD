@@ -11,7 +11,7 @@ Adds a more customizable smaller version of the "Extra HUD", which displays the 
 - **Repentance floor names, in every game language**: Russian, Japanese, Korean and Chinese floor names no longer show up blank.
 - **New filters**: active items, and temporary items (Lemegeton wisps, Zodiac, 3 Dollar Bill), which are marked with a small clock.
 - **Timer** shows hundredths of a second.
-- **Co-op and Jacob and Esau**: lists every player's items, marked with the player number; a player who dies keeps his items listed. The **Show items of** setting shows one player only.
+- **Co-op and Jacob and Esau**: lists every character's items, marked with a character number (Esau and each Tainted Lazarus form get their own); a player who dies keeps his items listed. The **Show items of** setting shows one character only.
 
 ## Features of original
 - **Display your last collected items on the screen**. over 100 of them instead of the last 10 in the normal game.

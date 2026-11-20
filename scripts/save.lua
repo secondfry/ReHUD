@@ -1,10 +1,10 @@
--- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { player keys }, number = { player numbers } }; earlier versions wrote neither.
+-- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { character keys }, number = { character numbers }, lazarus = { Tainted Lazarus flags } }; earlier versions wrote none of the last three.
 local json = require("json")
 
 local Save = {}
 
 -- Integer settings and their { min, max }: match the MCM entries; other values break layout maths or menu labels.
-local RANGE = { columns = { 1, 8 }, position = { 1, 2 }, showPlayer = { 0, 4 } }
+local RANGE = { columns = { 1, 8 }, position = { 1, 2 }, showPlayer = { 0, 8 } }
 
 -- The save file is untrusted: unknown keys, wrong types and out-of-range numbers keep the default.
 local function mergeConfig(config, saved)
@@ -18,11 +18,11 @@ local function mergeConfig(config, saved)
 	end
 end
 
-function Save.write(mod, config, ids, floors, owners, numbers)
-	mod:SaveData(json.encode({ config = config, items = ids, floor = floors, owner = owners, number = numbers }))
+function Save.write(mod, config, ids, floors, owners, numbers, lazarus)
+	mod:SaveData(json.encode({ config = config, items = ids, floor = floors, owner = owners, number = numbers, lazarus = lazarus }))
 end
 
--- Merges saved settings into `config` and returns the saved item ids, floor names, owners and numbers (nil if there is no usable save).
+-- Merges saved settings into `config` and returns the saved item ids, floor names, owners, numbers and Lazarus flags (nil if there is no usable save).
 function Save.read(mod, config)
 	if not mod:HasData() then return end
 
@@ -30,7 +30,7 @@ function Save.read(mod, config)
 	if not ok or type(data) ~= "table" then return end
 
 	mergeConfig(config, data.config)
-	return data.items, data.floor, data.owner, data.number
+	return data.items, data.floor, data.owner, data.number, data.lazarus
 end
 
 return Save

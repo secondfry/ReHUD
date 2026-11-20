@@ -13,5 +13,5 @@ return {
 	showTimer = true,
 	showItems = true,
 	showFloor = true,
-	showPlayer = 0, -- whose items to list: 0 all players, 1..4 that player only
+	showPlayer = 0, -- whose items to list: 0 all characters, 1..8 that character only
 }

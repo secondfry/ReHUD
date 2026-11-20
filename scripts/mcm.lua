@@ -4,7 +4,7 @@ local Mcm = {}
 local MOD_NAME, CATEGORY = "ReHUD", "General"
 local STEPS = { 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 0.8, 0.9, 1 } -- size, text size and transparency
 local POSITIONS = { "default", "bottom" }
-local PLAYERS = { "All", "P1", "P2", "P3", "P4" } -- showPlayer 0..4; the menu counts from 1
+local PLAYERS = { "All", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8" } -- showPlayer 0..8 (4 players, each possibly Jacob & Esau or Tainted Lazarus); the menu counts from 1
 
 local registered = false
 local menu -- Impure sets both MCM and ModConfigMenu; Pure only ModConfigMenu

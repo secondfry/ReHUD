@@ -100,8 +100,8 @@ local function shown(config, entry)
 		and (config.showPlayer == 0 or entry.number == config.showPlayer - 1)
 end
 
--- Newest item first. showPlayer 0 lists everyone, badged with the player number once a second player is present (a solo run looks as before); 1..4 only that player.
-local function drawItems(config, entries, playerCount, screen, hudPad)
+-- Newest item first. showPlayer 0 lists everyone, badged with the character number once a second character is known (a solo run looks as before); 1..8 only that character.
+local function drawItems(config, entries, characterCount, screen, hudPad)
 	local size = 32 * config.spriteScale
 	local limit = maxDisplay(config, screen, hudPad, size)
 	local color = Color(1, 1, 1, config.transparency)
@@ -109,7 +109,7 @@ local function drawItems(config, entries, playerCount, screen, hudPad)
 	local scale = Vector(config.spriteScale, config.spriteScale)
 	local columns = config.columns
 	local slot, lastFloor, padding = 0, "", Vector(0, 0)
-	local badges = config.showPlayer == 0 and playerCount > 1
+	local badges = config.showPlayer == 0 and characterCount > 1
 
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
@@ -142,13 +142,13 @@ local function drawItems(config, entries, playerCount, screen, hudPad)
 	end
 end
 
--- `playerCount`: players present (living and ghosts) at the last tracker update.
-function Render.draw(config, entries, playerCount)
+-- `characterCount`: characters with a list at the last tracker update.
+function Render.draw(config, entries, characterCount)
 	if config.disable then return end
 	local screen = Vector(Isaac.GetScreenWidth(), Isaac.GetScreenHeight())
 	local hudPad = HUD_OFFSET_MAX * Options.HUDOffset
 	if config.showTimer then drawTimer(config, screen, hudPad) end
-	if config.showItems then drawItems(config, entries, playerCount, screen, hudPad) end
+	if config.showItems then drawItems(config, entries, characterCount, screen, hudPad) end
 end
 
 return Render
