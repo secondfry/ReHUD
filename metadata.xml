@@ -34,7 +34,7 @@ to wofsauge for the original reHUD!
 to Piber for the Mod config menu!
 to Skojanza for helping bugfix the original mod
 to _Kilburn for the screen-size helper in the original mod</description>
-    <version>2.1</version>
+    <version>2.2</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Items"/>
