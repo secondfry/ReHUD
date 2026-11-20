@@ -94,9 +94,10 @@ local function drawClock(pos, color, scale)
 	sprite:Render(pos + ITEM_BOTTOM_RIGHT * scale.X)
 end
 
--- Whether the type and temporary filters let the entry through.
+-- Whether the type, temporary and player filters let the entry through.
 local function shown(config, entry)
 	return config[TYPE_FILTER[entry.type]] and (config.showTemporary or not entry.temporary)
+		and (config.showPlayer == 0 or entry.owner == config.showPlayer - 1)
 end
 
 -- Owner badges only help when the visible list mixes players; a solo run looks as before.
@@ -120,13 +121,11 @@ local function drawItems(config, entries, screen, hudPad)
 	local scale = Vector(config.spriteScale, config.spriteScale)
 	local columns = config.columns
 	local slot, lastFloor, padding = 0, "", Vector(0, 0)
-	local owner = config.showPlayer - 1
-	local badges = owner < 0 and mixesPlayers(config, entries)
+	local badges = config.showPlayer == 0 and mixesPlayers(config, entries)
 
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
 		if not shown(config, entry) then goto continue end
-		if owner >= 0 and entry.owner ~= owner then goto continue end
 
 		if config.showFloor and entry.floor ~= lastFloor then
 			slot = math.ceil(slot / columns) * columns

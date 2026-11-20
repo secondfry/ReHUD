@@ -49,9 +49,11 @@ function Tracker.restore(ids, floors, owners)
 	if type(ids) ~= "table" or type(floors) ~= "table" then return end
 	if type(owners) ~= "table" then owners = {} end
 	for i, id in ipairs(ids) do
+		if type(id) ~= "number" then goto continue end
 		local owner = owners[i]
-		if math.type(owner) ~= "integer" or owner < 0 then owner = 0 end
-		if type(id) == "number" then add(id, owner, tostring(floors[i] or "")) end
+		if math.type(owner) ~= "integer" or owner < 0 or owner > 3 then owner = 0 end -- the player filter supports 4 players
+		add(id, owner, tostring(floors[i] or ""))
+		::continue::
 	end
 end
 
@@ -75,29 +77,29 @@ function Tracker.update(players)
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
 		local player = byIndex[entry.owner]
-		if player then
-			local held, temporary = holding(player, entry.id)
-			if not held or tracked[entry.owner][entry.id] then
-				table.remove(entries, i)
-			else
-				tracked[entry.owner][entry.id] = true
-				entry.temporary = temporary
-			end
+		if not player then goto continue end -- ghost: frozen
+		local held, temporary = holding(player, entry.id)
+		if not held or tracked[entry.owner][entry.id] then
+			table.remove(entries, i)
+			goto continue
 		end
+		tracked[entry.owner][entry.id] = true
+		entry.temporary = temporary
+		::continue::
 	end
 
 	if not scanDue(players) then return end
 
 	local floor = currentFloorName()
 	for id = 1, maxCollectibleID do
-		if itemConfig:GetCollectible(id) then
-			for _, p in ipairs(players) do
-				if not tracked[p.index][id] then
-					local held, temporary = holding(p.player, id)
-					if held then add(id, p.index, floor, temporary) end
-				end
-			end
+		if not itemConfig:GetCollectible(id) then goto nextId end
+		for _, p in ipairs(players) do
+			if tracked[p.index][id] then goto nextPlayer end
+			local held, temporary = holding(p.player, id)
+			if held then add(id, p.index, floor, temporary) end
+			::nextPlayer::
 		end
+		::nextId::
 	end
 end
 
