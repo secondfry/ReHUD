@@ -1,4 +1,4 @@
--- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { character keys }, number = { character numbers }, lazarus = { Tainted Lazarus flags } }; earlier versions wrote none of the last three.
+-- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { character keys }, number = { character numbers }, swapped = { swapped-out flags } }; earlier versions wrote none of the last three.
 local json = require("json")
 
 local Save = {}
@@ -18,11 +18,11 @@ local function mergeConfig(config, saved)
 	end
 end
 
-function Save.write(mod, config, ids, floors, owners, numbers, lazarus)
-	mod:SaveData(json.encode({ config = config, items = ids, floor = floors, owner = owners, number = numbers, lazarus = lazarus }))
+function Save.write(mod, config, ids, floors, owners, numbers, swaps)
+	mod:SaveData(json.encode({ config = config, items = ids, floor = floors, owner = owners, number = numbers, swapped = swaps }))
 end
 
--- Merges saved settings into `config` and returns the saved item ids, floor names, owners, numbers and Lazarus flags (nil if there is no usable save).
+-- Merges saved settings into `config` and returns the saved item ids, floor names, owners, numbers and swapped-out flags (nil if there is no usable save).
 function Save.read(mod, config)
 	if not mod:HasData() then return end
 
@@ -30,7 +30,7 @@ function Save.read(mod, config)
 	if not ok or type(data) ~= "table" then return end
 
 	mergeConfig(config, data.config)
-	return data.items, data.floor, data.owner, data.number, data.lazarus
+	return data.items, data.floor, data.owner, data.number, data.swapped
 end
 
 return Save
