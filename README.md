@@ -7,6 +7,9 @@ A Repentance+ fork of [reHUD](https://steamcommunity.com/sharedfiles/filedetails
 
 Settings need [Mod Config Menu Impure](https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951). Mod Config Menu Pure works too if you already use it; do not enable both.
 
+## Support
+Bugs, questions, ideas: [Discord](https://discord.gg/5KvKaUpsvR)
+
 ## Special Thanks
 - wofsauge for the original reHUD
 - Piber for Mod Config Menu
