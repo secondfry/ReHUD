@@ -9,8 +9,8 @@ local fontTimer = Font()
 fontTimer:Load("font/pftempestasevencondensed.fnt")
 local fontFloorName = Font()
 fontFloorName:Load("font/terminus8.fnt")
-local fontFloorNameIntl = Font() -- terminus8 has no Cyrillic; teammeatex covers localized floor names
-fontFloorNameIntl:Load("font/teammeatex/teammeatex10.fnt")
+local fontFloorNameIntl = Font() -- terminus8 lacks Cyrillic and CJK; lanapixel covers every game language at a similar size
+fontFloorNameIntl:Load("font/cjk/lanapixel.fnt")
 
 local MAP_PADDING = 80
 local CARD_PADDING_LEFT = 120
