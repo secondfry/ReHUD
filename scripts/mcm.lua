@@ -47,8 +47,10 @@ end
 
 -- Safe to call repeatedly: registers once, as soon as MCM is loaded (load order between mods is not guaranteed).
 function Mcm.register(config)
-	menu = MCM or ModConfigMenu
-	if registered or not (menu and menu.AddSetting) then return end
+	if registered then return end
+	-- Impure sets MCM and ModConfigMenu, Pure only ModConfigMenu; skip an unrelated MCM global.
+	menu = (MCM and MCM.AddSetting and MCM) or ModConfigMenu
+	if not (menu and menu.AddSetting) then return end
 	registered = true
 
 	addBoolean(config, "disable", "Show HUD: ", true)
