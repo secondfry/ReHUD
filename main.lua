@@ -16,8 +16,8 @@ end
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function(_, isContinued)
 	mcm.register(config)
-	local ids, floors = save.read(ReHUD, config)
-	if isContinued then tracker.restore(ids, floors) else tracker.reset() end
+	local ids, floors, owners = save.read(ReHUD, config)
+	if isContinued then tracker.restore(ids, floors, owners) else tracker.reset() end
 	gameStarted = true
 end)
 
@@ -26,16 +26,17 @@ ReHUD:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
 	gameStarted = false
 end)
 
--- Every living player's items share one list; co-op babies (variant 1) are skipped.
+-- Each living player's items are tracked under his index; co-op babies (variant 1) are skipped.
+-- shortcut: identity is the GetPlayer index, which shifts if a co-op player leaves mid-run; key by GetPlayerType/InitSeed if that gets reported.
 ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 	if not gameStarted then return end
 	local players = {}
 	for i = 0, Game():GetNumPlayers() - 1 do
 		local player = Isaac.GetPlayer(i)
 		-- 0, not PlayerVariant.PLAYER: vanilla has no PlayerVariant enum; co-op babies are variant 1.
-		if player.Variant == 0 and not player:IsCoopGhost() then table.insert(players, player) end
+		-- Ghosts are left out so their items stay listed under the floors they were found on.
+		if player.Variant == 0 and not player:IsCoopGhost() then table.insert(players, { index = i, player = player }) end
 	end
-	if #players == 0 then return end -- keep the list instead of wiping it while everyone is a ghost
 	tracker.update(players)
 end)
 

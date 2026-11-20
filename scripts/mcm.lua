@@ -4,6 +4,7 @@ local Mcm = {}
 local MOD_NAME, CATEGORY = "ReHUD", "General"
 local STEPS = { 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 0.8, 0.9, 1 } -- size, text size and transparency
 local POSITIONS = { "default", "bottom" }
+local PLAYERS = { "All", "P1", "P2", "P3", "P4" } -- showPlayer 0..4; the menu counts from 1
 
 local registered = false
 local menu -- Impure sets both MCM and ModConfigMenu; Pure only ModConfigMenu
@@ -81,6 +82,12 @@ function Mcm.register(config)
 	addBoolean(config, "showActive", "Show active items: ")
 	addBoolean(config, "showTemporary", "Show temporary items: ", false,
 		"Optional: also list items you only hold temporarily, e.g. from Lemegeton wisps, Zodiac or 3 Dollar Bill.")
+	addNumber({
+		CurrentSetting = function() return config.showPlayer + 1 end,
+		Maximum = #PLAYERS,
+		Display = function() return "Show items of: " .. PLAYERS[config.showPlayer + 1] end,
+		OnChange = function(index) config.showPlayer = index - 1 end,
+	})
 end
 
 return Mcm

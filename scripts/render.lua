@@ -19,6 +19,7 @@ local TRINKET_PADDING = 70
 local HUD_OFFSET_MAX = Vector(20, 12) -- how far the vanilla HUD moves inward at HUD offset 1.0
 -- ShopIdle draws the 32x32 item frame with pivot (16, 32) at (0, 8), so it spans (-16, -24) to (16, 8) around the render position.
 local ITEM_BOTTOM_RIGHT = Vector(16, 8)
+local ITEM_TOP_LEFT = Vector(-16, -24)
 
 -- Which config flag shows each item type; types not listed are never shown.
 local TYPE_FILTER = {
@@ -93,7 +94,15 @@ local function drawClock(pos, color, scale)
 	sprite:Render(pos + ITEM_BOTTOM_RIGHT * scale.X)
 end
 
--- Newest item first.
+-- Owner badges only help when the list mixes players; a solo run looks as before.
+local function mixesPlayers(entries)
+	for _, entry in ipairs(entries) do
+		if entry.owner ~= entries[1].owner then return true end
+	end
+	return false
+end
+
+-- Newest item first. showPlayer 0 lists everyone (badged with the player number when mixed); 1..4 only that player.
 local function drawItems(config, entries, screen, hudPad)
 	local size = 32 * config.spriteScale
 	local limit = maxDisplay(config, screen, hudPad, size)
@@ -102,11 +111,14 @@ local function drawItems(config, entries, screen, hudPad)
 	local scale = Vector(config.spriteScale, config.spriteScale)
 	local columns = config.columns
 	local slot, lastFloor, padding = 0, "", Vector(0, 0)
+	local owner = config.showPlayer - 1
+	local badges = owner < 0 and mixesPlayers(entries)
 
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
 		if not config[TYPE_FILTER[entry.type]] then goto continue end
 		if entry.temporary and not config.showTemporary then goto continue end
+		if owner >= 0 and entry.owner ~= owner then goto continue end
 
 		if config.showFloor and entry.floor ~= lastFloor then
 			slot = math.ceil(slot / columns) * columns
@@ -125,6 +137,10 @@ local function drawItems(config, entries, screen, hudPad)
 		local pos = slotPosition(config, screen, hudPad, size, slot) + padding
 		sprite:Render(pos)
 		if entry.temporary then drawClock(pos, color, scale) end
+		if badges then
+			local corner = pos + ITEM_TOP_LEFT * scale.X
+			fontFloorName:DrawStringScaled(tostring(entry.owner + 1), corner.X, corner.Y, config.textScale, config.textScale, textColor, 0, false)
+		end
 		slot = slot + 1
 		if slot >= limit then return end
 		::continue::
