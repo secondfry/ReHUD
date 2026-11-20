@@ -10,18 +10,19 @@ Adds a more customizable smaller version of the &quot;Extra HUD&quot;, which dis
 [h1][b]Disable or unsubscribe the original reHUD when using this fork![/b][/h1]
 Only one of the two runs when both are enabled.
 
-[h1]Features[/h1]
-- [b]Display your collected items on the screen[/b], as many as fit, instead of the vanilla Extra HUD's short list.
-- [b]Customize the display[/b]: Position (Default: under the minimap, Bottom), Amount of Columns or Rows, Size, Text Size, Transparency, show or hide the timer, items and floor names. Follows the HUD Offset option. (Requires [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]Mod Config Menu Impure[/url]!)
-- [b]Display a more accurate ingame Timer![/b] Shows hundredths of a second ;)
-- [b]Filter your items[/b]. Display passives, familiars and/or actives, with or without temporary items (Lemegeton wisps, Zodiac, 3 Dollar Bill), which are marked with a small clock.
-- [b]Sort your items[/b]. Newest first, grouped under the name of the floor they were collected on.
+[h1]What this fork changes[/h1]
+- [b]Runs on Repentance+[/b]. The original targets Afterbirth+.
+- [b]Settings through [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]Mod Config Menu Impure[/url][/b] (Pure works too; do not enable both), saved in reHUD's own save.
+- [b]Follows the HUD Offset option.[/b]
+- [b]Shows as many items as fit on screen[/b], newest first, grouped by floor.
+- [b]Repentance floor names, in every game language[/b]: Russian, Japanese, Korean and Chinese floor names no longer show up blank.
+- [b]New filters[/b]: active items, and temporary items (Lemegeton wisps, Zodiac, 3 Dollar Bill), which are marked with a small clock.
+- [b]Timer[/b] shows hundredths of a second.
 
 [h1][b]Disable &quot;Extra HUD&quot; in the Options menu when using this mod [/b][/h1]
 
 
 [h1]You need [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]&quot;Mod Config Menu Impure&quot;[/url] to customize this mod![/h1]
-Already using Mod Config Menu Pure? It works too; do not enable both.
 
 [b]This mod does [u]not[/u] disable achievements![/b]
 
@@ -33,7 +34,29 @@ Bugs, questions, ideas: [url=https://discord.gg/5KvKaUpsvR]Discord[/url]
 to wofsauge for the original reHUD!
 to Piber for the Mod config menu!
 to Skojanza for helping bugfix the original mod
-to _Kilburn for the screen-size helper in the original mod</description>
+to _Kilburn for the screen-size helper in the original mod
+
+[h1]Original description (Afterbirth+)[/h1]
+[spoiler]Adds a more customizable smaller version of the &quot;Extra Hud&quot;, which displays the gametime and a list of collected items on the screen.
+
+[h1]Features[/h1]
+- [b]Display your last collected items on the screen[/b]. over 100 of them instead of the last 10 in the normal game
+- [b]Customize the display[/b]: Position (Right, Bottom), Amount of Coloumns, Size, Transparency,... (Requires [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1603631350]Mod Config Menu[/url]!)
+- [b]Display a more accurate ingame Timer![/b] Precise up to milliseconds ;)
+- [b]Filter your items[/b]. Display Passives or only Familiars.
+- [b]Sort your items[/b]. Order them by the floor they are collected on. 
+
+[h1][b]Disable &quot;Extra HUD&quot; in the Options menu when using this mod [/b][/h1]
+
+
+[h1]You need [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1603631350]&quot;Mod config Menu&quot;[/url] to customize this mod![/h1]
+
+[b]This mod does [u]not[/u] disable achievements![/b]
+
+
+[h1]Special Thanks[/h1]
+to Piber for the Mod config menu!
+to Skojanza for helping me bugfix this mod[/spoiler]</description>
     <version>2.2</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
