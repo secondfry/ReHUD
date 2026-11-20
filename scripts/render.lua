@@ -105,8 +105,8 @@ local function mixesPlayers(config, entries)
 	local first
 	for _, entry in ipairs(entries) do
 		if shown(config, entry) then
-			first = first or entry.owner
-			if entry.owner ~= first then return true end
+			first = first or entry.number
+			if entry.number ~= first then return true end
 		end
 	end
 	return false

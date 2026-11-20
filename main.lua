@@ -26,16 +26,16 @@ ReHUD:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
 	gameStarted = false
 end)
 
--- Each living player is passed with his GetPlayer index, shown as his number; co-op babies (variant 1) are skipped.
+-- Each player is passed with his GetPlayer index, shown as his number; co-op babies (variant 1) are skipped.
 ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 	if not gameStarted then return end
 	local players = {}
 	for i = 0, Game():GetNumPlayers() - 1 do
 		local player = Isaac.GetPlayer(i)
 		-- 0, not PlayerVariant.PLAYER: vanilla has no PlayerVariant enum; co-op babies are variant 1.
-		-- Ghosts are left out so their items stay listed under the floors they were found on.
-		-- Helpers with a Parent (the Strawman Keeper; IsaacScript isChildPlayer) are skipped like babies: no P-number, no entries frozen after they despawn.
-		if player.Variant == 0 and not player:IsCoopGhost() and not player.Parent then table.insert(players, { index = i, player = player }) end
+		-- Ghosts are marked so their items stay listed under the floors they were found on.
+		-- Helpers with a Parent (the Strawman Keeper; IsaacScript isChildPlayer) are skipped like babies: no P-number or badge of their own.
+		if player.Variant == 0 and not player.Parent then table.insert(players, { index = i, player = player, ghost = player:IsCoopGhost() }) end
 	end
 	tracker.update(players)
 end)

@@ -1,5 +1,5 @@
 -- Collected items per player, oldest first. Each entry: { id, owner, number, floor, type, temporary }; the same item held by two players is two entries.
--- `owner` is the player's identity (see playerKey); `number` is his Isaac.GetPlayer index, refreshed while he is present and kept as last seen once he is a ghost or gone.
+-- `owner` is the player's identity (see playerKey); `number` is his current Isaac.GetPlayer index, ghosts included.
 local Tracker = { entries = {} }
 
 local itemConfig = Isaac.GetItemConfig()
@@ -16,6 +16,7 @@ local function add(id, owner, number, floor, temporary)
 end
 
 -- The GetPlayer index shifts when a co-op player leaves; the Sad Onion RNG seed stays the player's for the whole run, saves included (IsaacScript getPlayerIndex).
+-- shortcut: a mod calling Next() on that RNG changes the key and his items re-list under the current floor; switch to a sturdier key if that gets reported.
 local function playerKey(player)
 	return player:GetCollectibleRNG(1):GetSeed()
 end
@@ -56,7 +57,7 @@ function Tracker.reset()
 end
 
 -- Rebuild from the saved parallel arrays; entries whose item no longer exists are dropped.
--- A missing or malformed owner (saves from before co-op tracking) is left unset and becomes whoever is player 0 on the next update; a bad number shows as P1.
+-- A missing or malformed owner (saves from before co-op tracking) is left unset and becomes whoever is living player 0 on a later update; a bad number shows as P1.
 function Tracker.restore(ids, floors, owners, numbers)
 	Tracker.reset()
 	if type(ids) ~= "table" or type(floors) ~= "table" then return end
@@ -78,29 +79,36 @@ function Tracker.serialize()
 	return ids, floors, owners, numbers
 end
 
--- `players`: living players as { index, player }. Entries of anyone not listed (a co-op ghost, a player who left) stay as they are.
+-- `players`: players as { index, player, ghost }. A ghost's entries stay as they are; a player not listed left the run, and his items left with him.
 -- Drops items a player lost and refreshes each kind every update; scans for new ones only when due.
 function Tracker.update(players)
+	if #players == 0 then return end -- transient state: read as everyone leaving, it would wipe the list
 	local byKey, tracked, firstKey = {}, {}, nil
 	for _, p in ipairs(players) do
 		p.key = playerKey(p.player)
 		byKey[p.key], tracked[p.key] = p, {}
-		if p.index == 0 then firstKey = p.key end
+		if p.index == 0 and not p.ghost then firstKey = p.key end
 	end
 
 	local entries = Tracker.entries
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
 		entry.owner = entry.owner or firstKey
+		if not entry.owner then goto continue end -- old save: waits for a living player 0
 		local p = byKey[entry.owner]
-		if not p then goto continue end -- ghost or gone: frozen
+		if not p then
+			table.remove(entries, i)
+			goto continue
+		end
+		entry.number = p.index
+		if p.ghost then goto continue end -- frozen
 		local held, temporary = holding(p.player, entry.id)
 		if not held or tracked[p.key][entry.id] then
 			table.remove(entries, i)
 			goto continue
 		end
 		tracked[p.key][entry.id] = true
-		entry.number, entry.temporary = p.index, temporary
+		entry.temporary = temporary
 		::continue::
 	end
 
@@ -110,7 +118,7 @@ function Tracker.update(players)
 	for id = 1, maxCollectibleID do
 		if not itemConfig:GetCollectible(id) then goto nextId end
 		for _, p in ipairs(players) do
-			if tracked[p.key][id] then goto nextPlayer end
+			if p.ghost or tracked[p.key][id] then goto nextPlayer end
 			local held, temporary = holding(p.player, id)
 			if held then add(id, p.key, p.index, floor, temporary) end
 			::nextPlayer::
