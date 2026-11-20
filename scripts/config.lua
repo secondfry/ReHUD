@@ -14,5 +14,4 @@ return {
 	showItems = true,
 	showFloor = true,
 	showLeft = false, -- also list the items of players who left the run
-	showPlayer = 0, -- whose items to list: 0 all characters, n character n only
 }

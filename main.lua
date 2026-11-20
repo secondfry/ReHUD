@@ -15,9 +15,9 @@ function ReHUD:isActive()
 end
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function(_, isContinued)
-	mcm.register(config, tracker.knownCharacters)
-	local ids, floors, owners, numbers, rows = save.read(ReHUD, config)
-	if isContinued then tracker.restore(ids, floors, owners, numbers, rows) else tracker.reset() end
+	mcm.register(config)
+	local ids, floors, owners, rows = save.read(ReHUD, config)
+	if isContinued then tracker.restore(ids, floors, owners, rows) else tracker.reset() end
 	gameStarted = true
 end)
 
@@ -26,17 +26,21 @@ ReHUD:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
 	gameStarted = false
 end)
 
--- Each player is passed with his GetPlayer index; co-op babies (variant 1) are skipped.
+-- Playable characters only: co-op babies (variant 1; vanilla has no PlayerVariant enum), helpers with a Parent (Strawman Keeper; IsaacScript isChildPlayer)
+-- and the Tainted Soul (own seed, same character as Tainted Forgotten, so a solo run counts one) get no number or badge.
+local function isCharacter(player)
+	if player.Variant ~= 0 then return false end
+	if player.Parent then return false end
+	return player:GetPlayerType() ~= PlayerType.PLAYER_THESOUL_B
+end
+
+-- Every playable character with its GetPlayer index; ghosts are passed, marked, so their items stay listed.
 ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 	if not gameStarted then return end
 	local players = {}
 	for i = 0, Game():GetNumPlayers() - 1 do
 		local player = Isaac.GetPlayer(i)
-		-- 0, not PlayerVariant.PLAYER: vanilla has no PlayerVariant enum; co-op babies are variant 1.
-		-- Ghosts are marked so their items stay listed under the floors they were found on.
-		-- Helpers with a Parent (the Strawman Keeper; IsaacScript isChildPlayer) are skipped like babies: no number or badge of their own.
-		-- The Tainted Soul is a separate entry with its own seed but the same person as Tainted Forgotten: skipped too, so a solo run counts one character.
-		if player.Variant == 0 and not player.Parent and player:GetPlayerType() ~= PlayerType.PLAYER_THESOUL_B then table.insert(players, { index = i, player = player, ghost = player:IsCoopGhost() }) end
+		if isCharacter(player) then table.insert(players, { index = i, player = player, ghost = player:IsCoopGhost() }) end
 	end
 	tracker.update(players)
 end)
@@ -45,4 +49,4 @@ ReHUD:AddCallback(ModCallbacks.MC_POST_RENDER, function()
 	render.draw(config, tracker.entries, tracker.characterCount, tracker.leftCount)
 end)
 
-mcm.register(config, tracker.knownCharacters)
+mcm.register(config)

@@ -94,13 +94,12 @@ local function drawClock(pos, color, scale)
 	sprite:Render(pos + ITEM_BOTTOM_RIGHT * scale.X)
 end
 
--- Whether the type, temporary, left-the-run and player filters let the entry through.
+-- Whether the type, temporary and left-the-run filters let the entry through.
 local function shown(config, entry)
 	return config[TYPE_FILTER[entry.type]] and (config.showTemporary or not entry.temporary) and (config.showLeft or not entry.left)
-		and (config.showPlayer == 0 or entry.number == config.showPlayer - 1)
 end
 
--- Newest item first. showPlayer 0 lists everyone, badged with the character number once a second character is known (a solo run looks as before); n only character n.
+-- Newest item first, badged with the character number once a second character is known (a solo run looks as before).
 local function drawItems(config, entries, characterCount, screen, hudPad)
 	local size = 32 * config.spriteScale
 	local limit = maxDisplay(config, screen, hudPad, size)
@@ -109,7 +108,7 @@ local function drawItems(config, entries, characterCount, screen, hudPad)
 	local scale = Vector(config.spriteScale, config.spriteScale)
 	local columns = config.columns
 	local slot, lastFloor, padding = 0, "", Vector(0, 0)
-	local badges = config.showPlayer == 0 and characterCount > 1
+	local badges = characterCount > 1
 
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
@@ -142,7 +141,7 @@ local function drawItems(config, entries, characterCount, screen, hudPad)
 	end
 end
 
--- `characterCount`, `leftCount`: characters with a list at the last tracker update, and players who left with one (counted only when shown).
+-- `characterCount`: present players plus swapped-out characters with items; `leftCount`: players who left with items (added only when shown).
 function Render.draw(config, entries, characterCount, leftCount)
 	if config.disable then return end
 	local screen = Vector(Isaac.GetScreenWidth(), Isaac.GetScreenHeight())

@@ -1,10 +1,9 @@
 -- Collected items per character, oldest first. Each entry: { id, owner, number, left, floor, type, temporary }; the same item held by two characters is two entries.
--- `owner` is the character's key and `number` his character number (see roster.lua); `left` marks the items of a player who left the run.
+-- `owner` is the character's key and `number` its character number (see roster.lua); `left` marks the items of a player who left the run.
 -- At the last update: characterCount counts present players and swapped-out characters with a list, leftCount players who left with a list.
 local Tracker = { entries = {}, characterCount = 0, leftCount = 0 }
 
 local roster = include("scripts.roster")
-Tracker.knownCharacters = roster.size -- character numbers handed out this run, for the menu's player filter
 local itemConfig = Isaac.GetItemConfig()
 local maxCollectibleID = itemConfig:GetCollectibles().Size - 1 -- includes modded items
 
@@ -63,9 +62,9 @@ function Tracker.reset()
 end
 
 -- Rebuild from the saved parallel arrays and roster rows ({ key, number, swapped, left }); entries whose item no longer exists are dropped.
--- Saves without a roster number characters by their items' saved numbers. A missing or malformed owner (saves from before co-op tracking) is left unset
--- and becomes whoever is living player 0 on a later update; a bad number shows as character 1.
-function Tracker.restore(ids, floors, owners, numbers, rows)
+-- An owner that is missing (saves from before co-op tracking), malformed or without a valid roster row is left unset
+-- and goes to whoever is living player 0 on a later update; until then the items show as character 1.
+function Tracker.restore(ids, floors, owners, rows)
 	Tracker.reset()
 	if type(rows) == "table" then
 		for _, row in ipairs(rows) do
@@ -77,27 +76,26 @@ function Tracker.restore(ids, floors, owners, numbers, rows)
 	end
 	if type(ids) ~= "table" or type(floors) ~= "table" then return end
 	if type(owners) ~= "table" then owners = {} end
-	if type(numbers) ~= "table" then numbers = {} end
 	for i, id in ipairs(ids) do
 		if type(id) ~= "number" then goto continue end
-		local owner, number = savedInteger(owners[i]), savedInteger(numbers[i]) or 0
-		if owner then roster.claim(owner, number) end -- unset owners take their number once resolved
-		local entry = add(id, owner, owner and roster.number(owner) or number, tostring(floors[i] or ""))
+		local owner = savedInteger(owners[i])
+		if owner and not roster.number(owner) then owner = nil end -- no roster row: loads like an old save
+		local entry = add(id, owner, owner and roster.number(owner) or 0, tostring(floors[i] or ""))
 		if entry then entry.left = roster.isLeft(owner) or nil end
 		::continue::
 	end
 end
 
 function Tracker.serialize()
-	local ids, floors, owners, numbers = {}, {}, {}, {}
+	local ids, floors, owners = {}, {}, {}
 	for i, entry in ipairs(Tracker.entries) do
 		-- false, not nil, for an unresolved owner: the game's json.lua drops nulls from arrays, which would shift later owners.
-		ids[i], floors[i], owners[i], numbers[i] = entry.id, entry.floor, entry.owner or false, entry.number
+		ids[i], floors[i], owners[i] = entry.id, entry.floor, entry.owner or false
 	end
-	return ids, floors, owners, numbers, roster.serialize()
+	return ids, floors, owners, roster.serialize()
 end
 
--- `players`: players as { index, player, ghost }, by index. A ghost's and a swapped-out character's entries stay as they are; any other player not listed left the run, and his entries stay too, marked left.
+-- `players`: players as { index, player, ghost }, by index. A ghost's and a swapped-out character's entries stay as they are; any other player not listed left the run, and that player's entries stay too, marked left.
 -- Drops items a player lost and refreshes each kind every update; scans for new ones only when due.
 function Tracker.update(players)
 	if #players == 0 then return end -- transient state: read as everyone leaving, it would wipe the list
