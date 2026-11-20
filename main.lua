@@ -46,7 +46,7 @@ ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 end)
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_RENDER, function()
-	render.draw(config, tracker.entries, tracker.characterCount, tracker.leftCount)
+	render.draw(config, tracker.ordered(), tracker.characterCount, tracker.leftCount)
 end)
 
 mcm.register(config)
