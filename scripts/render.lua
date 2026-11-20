@@ -79,7 +79,7 @@ local function clockSprite()
 	if clock then return clock end
 	clock = Sprite()
 	clock:Load("gfx/rehud/clock.anm2", true)
-	clock:Play("Idle")
+	clock:SetFrame("Idle", 0)
 	return clock
 end
 
