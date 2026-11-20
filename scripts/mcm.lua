@@ -74,9 +74,9 @@ function Mcm.register(config)
 	MCM.AddSpace(MOD_NAME, CATEGORY)
 	addBoolean(config, "showPassive", "Show passive items: ")
 	addBoolean(config, "showFamiliar", "Show familiar items: ")
+	addBoolean(config, "showActive", "Show active items: ")
 	addBoolean(config, "showTemporary", "Show temporary items: ", false,
 		"Optional: also list items you only hold temporarily, e.g. from Lemegeton wisps, Zodiac or 3 Dollar Bill.")
-	-- Show active items (placeholder from the original: config.showActive has no menu entry yet)
 end
 
 return Mcm
