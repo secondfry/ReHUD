@@ -24,8 +24,8 @@ end
 
 -- Whether the player has the item at all, and whether only through modifiers.
 local function holding(player, id)
-	if player:GetCollectibleNum(id, true) > 0 then return true, false end
-	return player:GetCollectibleNum(id, false) > 0, true
+	local real = player:GetCollectibleNum(id, true)
+	return real > 0 or player:GetCollectibleNum(id, false) > 0, real == 0
 end
 
 -- Due when the total collectible count moved or the fixed cadence elapsed.
