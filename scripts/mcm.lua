@@ -14,10 +14,11 @@ local function indexOf(list, value)
 	return 1
 end
 
--- `invert` is for "disable", which the menu shows as "Show HUD".
-local function addBoolean(config, key, label, invert)
+-- `invert` is for "disable", which the menu shows as "Show HUD". `info` is the optional help text.
+local function addBoolean(config, key, label, invert, info)
 	MCM.AddSetting(MOD_NAME, CATEGORY, {
 		Type = MCM.OptionType.BOOLEAN,
+		Info = info,
 		CurrentSetting = function() return config[key] end,
 		Display = function()
 			local on = config[key]
@@ -73,6 +74,8 @@ function Mcm.register(config)
 	MCM.AddSpace(MOD_NAME, CATEGORY)
 	addBoolean(config, "showPassive", "Show passive items: ")
 	addBoolean(config, "showFamiliar", "Show familiar items: ")
+	addBoolean(config, "showTemporary", "Show temporary items: ", false,
+		"Optional: also list items you only hold temporarily, e.g. from Lemegeton wisps, Zodiac or 3 Dollar Bill.")
 	-- Show active items (placeholder from the original: config.showActive has no menu entry yet)
 end
 

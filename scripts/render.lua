@@ -85,6 +85,7 @@ local function drawItems(config, entries, screen, hudPad)
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
 		if not config[TYPE_FILTER[entry.type]] then goto continue end
+		if entry.temporary and not config.showTemporary then goto continue end
 
 		if config.showFloor and entry.floor ~= lastFloor then
 			slot = math.ceil(slot / columns) * columns

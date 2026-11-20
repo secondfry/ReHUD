@@ -8,6 +8,7 @@ return {
 	transparency = 0.5,
 	showPassive = true,
 	showFamiliar = true,
+	showTemporary = true, -- items only granted by modifiers (wisps, Zodiac, 3 Dollar Bill)
 	showActive = false,
 	showTimer = true,
 	showItems = true,
