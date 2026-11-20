@@ -9,6 +9,8 @@ local fontTimer = Font()
 fontTimer:Load("font/pftempestasevencondensed.fnt")
 local fontFloorName = Font()
 fontFloorName:Load("font/terminus8.fnt")
+local fontFloorNameIntl = Font() -- terminus8 has no Cyrillic; teammeatex covers localized floor names
+fontFloorNameIntl:Load("font/teammeatex/teammeatex10.fnt")
 
 local MAP_PADDING = 80
 local CARD_PADDING_LEFT = 120
@@ -111,7 +113,8 @@ local function drawItems(config, entries, screen, hudPad)
 			if slot >= limit then return end
 			local offset, step = floorNameLayout(config, size, slot)
 			local pos = slotPosition(config, screen, hudPad, size, slot) + padding + offset
-			fontFloorName:DrawStringScaled(entry.floor, pos.X, pos.Y, config.textScale, config.textScale, textColor, 0, false)
+			local font = entry.floor:find("[\128-\255]") and fontFloorNameIntl or fontFloorName
+			font:DrawStringScaledUTF8(entry.floor, pos.X, pos.Y, config.textScale, config.textScale, textColor, 0, false)
 			lastFloor = entry.floor
 			padding = padding + step
 		end
