@@ -1,4 +1,4 @@
--- Collected-item list of player 0, oldest first. Each entry: { id, floor, type, temporary }.
+-- Collected-item list of all given players merged, oldest first. Each entry: { id, floor, type, temporary }.
 local Tracker = { entries = {} }
 
 local itemConfig = Isaac.GetItemConfig()
@@ -22,15 +22,20 @@ local function currentFloorName()
 	return Game():GetLevel():GetName()
 end
 
--- Whether the player has the item at all, and whether only through modifiers.
-local function holding(player, id)
-	local real = player:GetCollectibleNum(id, true)
-	return real > 0 or player:GetCollectibleNum(id, false) > 0, real == 0
+-- Whether any player has the item at all, and whether only through modifiers.
+local function holding(players, id)
+	local held = false
+	for _, player in ipairs(players) do
+		if player:GetCollectibleNum(id, true) > 0 then return true, false end
+		held = held or player:GetCollectibleNum(id, false) > 0
+	end
+	return held, true
 end
 
--- Due when the collectible count moved or the fixed cadence elapsed.
-local function scanDue(player)
-	local count = player:GetCollectibleCount()
+-- Due when the total collectible count moved or the fixed cadence elapsed.
+local function scanDue(players)
+	local count = 0
+	for _, player in ipairs(players) do count = count + player:GetCollectibleCount() end
 	sinceScan = sinceScan + 1
 	if count == lastCount and sinceScan < SCAN_INTERVAL then return false end
 	lastCount, sinceScan = count, 0
@@ -59,12 +64,12 @@ function Tracker.serialize()
 	return ids, floors
 end
 
--- Drops items the player lost and refreshes each kind every update; scans for new ones only when due.
-function Tracker.update(player)
+-- Drops items every player lost and refreshes each kind every update; scans for new ones only when due.
+function Tracker.update(players)
 	local entries, tracked = Tracker.entries, {}
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
-		local held, temporary = holding(player, entry.id)
+		local held, temporary = holding(players, entry.id)
 		if not held or tracked[entry.id] then
 			table.remove(entries, i)
 		else
@@ -73,12 +78,12 @@ function Tracker.update(player)
 		end
 	end
 
-	if not scanDue(player) then return end
+	if not scanDue(players) then return end
 
 	local floor = currentFloorName()
 	for id = 1, maxCollectibleID do
 		if not tracked[id] and itemConfig:GetCollectible(id) then
-			local held, temporary = holding(player, id)
+			local held, temporary = holding(players, id)
 			if held then add(id, floor, temporary) end
 		end
 	end
