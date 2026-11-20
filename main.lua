@@ -35,7 +35,8 @@ ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 		-- 0, not PlayerVariant.PLAYER: vanilla has no PlayerVariant enum; co-op babies are variant 1.
 		-- Ghosts are marked so their items stay listed under the floors they were found on.
 		-- Helpers with a Parent (the Strawman Keeper; IsaacScript isChildPlayer) are skipped like babies: no P-number or badge of their own.
-		if player.Variant == 0 and not player.Parent then table.insert(players, { index = i, player = player, ghost = player:IsCoopGhost() }) end
+		-- The Tainted Soul is a separate entry with its own seed but the same person as Tainted Forgotten: skipped too, so a solo run counts one player.
+		if player.Variant == 0 and not player.Parent and player:GetPlayerType() ~= PlayerType.PLAYER_THESOUL_B then table.insert(players, { index = i, player = player, ghost = player:IsCoopGhost() }) end
 	end
 	tracker.update(players)
 end)

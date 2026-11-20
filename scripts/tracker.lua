@@ -9,6 +9,10 @@ local maxCollectibleID = itemConfig:GetCollectibles().Size - 1 -- includes modde
 local SCAN_INTERVAL = 30
 local lastCount, sinceScan = nil, 0 -- summed GetCollectibleCount() at the last scan and updates since; nil forces a scan
 
+-- Flip swaps which Tainted Lazarus form sits at his GetPlayer index, and each form has its own seed; both are one player, so the absent form's items stay listed under that number.
+-- shortcut: a co-op leave that shifts another Tainted Lazarus into the departed player's number freezes those items instead of removing them; store the partner's key if that gets reported.
+local TAINTED_LAZARUS = { [PlayerType.PLAYER_LAZARUS_B] = true, [PlayerType.PLAYER_LAZARUS2_B] = true }
+
 local function add(id, owner, number, floor, temporary)
 	local item = itemConfig:GetCollectible(id)
 	if not item then return end
@@ -79,16 +83,17 @@ function Tracker.serialize()
 	return ids, floors, owners, numbers
 end
 
--- `players`: players as { index, player, ghost }. A ghost's entries stay as they are; a player not listed left the run, and his items left with him.
+-- `players`: players as { index, player, ghost }. A ghost's entries stay as they are; a player not listed left the run (unless he is Tainted Lazarus's other form), and his items left with him.
 -- Drops items a player lost and refreshes each kind every update; scans for new ones only when due.
 function Tracker.update(players)
 	if #players == 0 then return end -- transient state: read as everyone leaving, it would wipe the list
 	Tracker.playerCount = #players
-	local byKey, tracked, firstKey = {}, {}, nil
+	local byKey, tracked, firstKey, lazarusAt = {}, {}, nil, {}
 	for _, p in ipairs(players) do
 		p.key = playerKey(p.player)
 		byKey[p.key], tracked[p.key] = p, {}
 		if p.index == 0 and not p.ghost then firstKey = p.key end
+		lazarusAt[p.index] = TAINTED_LAZARUS[p.player:GetPlayerType()]
 	end
 
 	local entries = Tracker.entries
@@ -97,6 +102,7 @@ function Tracker.update(players)
 		entry.owner = entry.owner or firstKey
 		if not entry.owner then goto continue end -- old save: waits for a living player 0
 		local p = byKey[entry.owner]
+		if not p and lazarusAt[entry.number] then goto continue end -- the other Tainted Lazarus form: frozen
 		if not p then
 			table.remove(entries, i)
 			goto continue
