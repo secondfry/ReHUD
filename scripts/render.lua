@@ -19,7 +19,6 @@ local TRINKET_PADDING = 70
 local HUD_OFFSET_MAX = Vector(20, 12) -- how far the vanilla HUD moves inward at HUD offset 1.0
 -- ShopIdle draws the 32x32 item frame with pivot (16, 32) at (0, 8), so it spans (-16, -24) to (16, 8) around the render position.
 local ITEM_BOTTOM_RIGHT = Vector(16, 8)
-local ITEM_TOP_LEFT = Vector(-16, -24)
 
 -- Which config flag shows each item type; types not listed are never shown.
 local TYPE_FILTER = {
@@ -94,13 +93,8 @@ local function drawClock(pos, color, scale)
 	sprite:Render(pos + ITEM_BOTTOM_RIGHT * scale.X)
 end
 
--- Whether the type, temporary and left-the-run filters let the entry through.
-local function shown(config, entry)
-	return config[TYPE_FILTER[entry.type]] and (config.showTemporary or not entry.temporary) and (config.showLeft or not entry.left)
-end
-
--- Newest item first, badged with the character number once a second character is known (a solo run looks as before).
-local function drawItems(config, entries, characterCount, screen, hudPad)
+-- Newest item first.
+local function drawItems(config, entries, screen, hudPad)
 	local size = 32 * config.spriteScale
 	local limit = maxDisplay(config, screen, hudPad, size)
 	local color = Color(1, 1, 1, config.transparency)
@@ -108,11 +102,11 @@ local function drawItems(config, entries, characterCount, screen, hudPad)
 	local scale = Vector(config.spriteScale, config.spriteScale)
 	local columns = config.columns
 	local slot, lastFloor, padding = 0, "", Vector(0, 0)
-	local badges = characterCount > 1
 
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
-		if not shown(config, entry) then goto continue end
+		if not config[TYPE_FILTER[entry.type]] then goto continue end
+		if entry.temporary and not config.showTemporary then goto continue end
 
 		if config.showFloor and entry.floor ~= lastFloor then
 			slot = math.ceil(slot / columns) * columns
@@ -131,23 +125,18 @@ local function drawItems(config, entries, characterCount, screen, hudPad)
 		local pos = slotPosition(config, screen, hudPad, size, slot) + padding
 		sprite:Render(pos)
 		if entry.temporary then drawClock(pos, color, scale) end
-		if badges then
-			local corner = pos + ITEM_TOP_LEFT * scale.X
-			fontFloorName:DrawStringScaled(tostring(entry.number + 1), corner.X, corner.Y, scale.X, scale.Y, textColor, 0, false)
-		end
 		slot = slot + 1
 		if slot >= limit then return end
 		::continue::
 	end
 end
 
--- `characterCount`: present players plus swapped-out characters with items; `leftCount`: players who left with items (added only when shown).
-function Render.draw(config, entries, characterCount, leftCount)
+function Render.draw(config, entries)
 	if config.disable then return end
 	local screen = Vector(Isaac.GetScreenWidth(), Isaac.GetScreenHeight())
 	local hudPad = HUD_OFFSET_MAX * Options.HUDOffset
 	if config.showTimer then drawTimer(config, screen, hudPad) end
-	if config.showItems then drawItems(config, entries, characterCount + (config.showLeft and leftCount or 0), screen, hudPad) end
+	if config.showItems then drawItems(config, entries, screen, hudPad) end
 end
 
 return Render

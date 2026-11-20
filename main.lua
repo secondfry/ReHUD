@@ -16,8 +16,8 @@ end
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function(_, isContinued)
 	mcm.register(config)
-	local ids, floors, owners, rows = save.read(ReHUD, config)
-	if isContinued then tracker.restore(ids, floors, owners, rows) else tracker.reset() end
+	local ids, floors = save.read(ReHUD, config)
+	if isContinued then tracker.restore(ids, floors) else tracker.reset() end
 	gameStarted = true
 end)
 
@@ -26,27 +26,16 @@ ReHUD:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
 	gameStarted = false
 end)
 
--- Playable characters only: co-op babies (variant 1; vanilla has no PlayerVariant enum), helpers with a Parent (Strawman Keeper; IsaacScript isChildPlayer)
--- and the Tainted Soul (own seed, same character as Tainted Forgotten, so a solo run counts one) get no number or badge.
-local function isCharacter(player)
-	if player.Variant ~= 0 then return false end
-	if player.Parent then return false end
-	return player:GetPlayerType() ~= PlayerType.PLAYER_THESOUL_B
-end
-
--- Every playable character with its GetPlayer index; ghosts are passed, marked, so their items stay listed.
+-- Only player 0 is tracked.
 ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 	if not gameStarted then return end
-	local players = {}
-	for i = 0, Game():GetNumPlayers() - 1 do
-		local player = Isaac.GetPlayer(i)
-		if isCharacter(player) then table.insert(players, { index = i, player = player, ghost = player:IsCoopGhost() }) end
-	end
-	tracker.update(players)
+	local player = Isaac.GetPlayer(0)
+	if player:IsCoopGhost() then return end -- keep the list instead of wiping it while player 0 is a ghost
+	tracker.update(player)
 end)
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_RENDER, function()
-	render.draw(config, tracker.ordered(), tracker.characterCount, tracker.leftCount)
+	render.draw(config, tracker.entries)
 end)
 
 mcm.register(config)

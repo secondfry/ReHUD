@@ -13,5 +13,4 @@ return {
 	showTimer = true,
 	showItems = true,
 	showFloor = true,
-	showLeft = false, -- also list the items of players who left the run
 }
