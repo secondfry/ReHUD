@@ -26,13 +26,14 @@ ReHUD:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
 	gameStarted = false
 end)
 
--- Every living player's items share one list; co-op babies (non-PLAYER variants) are skipped.
+-- Every living player's items share one list; co-op babies (variant 1) are skipped.
 ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 	if not gameStarted then return end
 	local players = {}
 	for i = 0, Game():GetNumPlayers() - 1 do
 		local player = Isaac.GetPlayer(i)
-		if player.Variant == PlayerVariant.PLAYER and not player:IsCoopGhost() then table.insert(players, player) end
+		-- 0, not PlayerVariant.PLAYER: vanilla has no PlayerVariant enum; co-op babies are variant 1.
+		if player.Variant == 0 and not player:IsCoopGhost() then table.insert(players, player) end
 	end
 	if #players == 0 then return end -- keep the list instead of wiping it while everyone is a ghost
 	tracker.update(players)
