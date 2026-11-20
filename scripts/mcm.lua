@@ -1,4 +1,4 @@
--- Settings page for Mod Config Menu Impure. ReHUD keeps owning its config and save; MCM only edits the table.
+-- Settings page for Mod Config Menu Impure or Pure. ReHUD keeps owning its config and save; MCM only edits the table.
 local Mcm = {}
 
 local MOD_NAME, CATEGORY = "ReHUD", "General"
@@ -6,6 +6,7 @@ local STEPS = { 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 0.8, 0.9, 1 } -- size, text size
 local POSITIONS = { "default", "bottom" }
 
 local registered = false
+local menu -- Impure sets both MCM and ModConfigMenu; Pure only ModConfigMenu
 
 local function indexOf(list, value)
 	for i, v in ipairs(list) do
@@ -16,8 +17,8 @@ end
 
 -- `invert` is for "disable", which the menu shows as "Show HUD". `info` is the optional help text.
 local function addBoolean(config, key, label, invert, info)
-	MCM.AddSetting(MOD_NAME, CATEGORY, {
-		Type = MCM.OptionType.BOOLEAN,
+	menu.AddSetting(MOD_NAME, CATEGORY, {
+		Type = menu.OptionType.BOOLEAN,
 		Info = info,
 		CurrentSetting = function() return config[key] end,
 		Display = function()
@@ -30,9 +31,9 @@ local function addBoolean(config, key, label, invert, info)
 end
 
 local function addNumber(setting)
-	setting.Type = MCM.OptionType.NUMBER
+	setting.Type = menu.OptionType.NUMBER
 	setting.Minimum = 1
-	MCM.AddSetting(MOD_NAME, CATEGORY, setting)
+	menu.AddSetting(MOD_NAME, CATEGORY, setting)
 end
 
 local function addStep(config, key, label)
@@ -46,7 +47,8 @@ end
 
 -- Safe to call repeatedly: registers once, as soon as MCM is loaded (load order between mods is not guaranteed).
 function Mcm.register(config)
-	if registered or not MCM then return end
+	menu = MCM or ModConfigMenu
+	if registered or not (menu and menu.AddSetting) then return end
 	registered = true
 
 	addBoolean(config, "disable", "Show HUD: ", true)
@@ -71,7 +73,7 @@ function Mcm.register(config)
 		OnChange = function(columns) config.columns = columns end,
 	})
 	addStep(config, "transparency", "Transparency: ")
-	MCM.AddSpace(MOD_NAME, CATEGORY)
+	menu.AddSpace(MOD_NAME, CATEGORY)
 	addBoolean(config, "showPassive", "Show passive items: ")
 	addBoolean(config, "showFamiliar", "Show familiar items: ")
 	addBoolean(config, "showActive", "Show active items: ")
