@@ -1,6 +1,6 @@
 -- Collected items per player, oldest first. Each entry: { id, owner, number, floor, type, temporary }; the same item held by two players is two entries.
 -- `owner` is the player's identity (see playerKey); `number` is his current Isaac.GetPlayer index, ghosts included.
-local Tracker = { entries = {} }
+local Tracker = { entries = {}, playerCount = 0 } -- playerCount: players passed to the last update
 
 local itemConfig = Isaac.GetItemConfig()
 local maxCollectibleID = itemConfig:GetCollectibles().Size - 1 -- includes modded items
@@ -52,7 +52,7 @@ local function scanDue(players)
 end
 
 function Tracker.reset()
-	Tracker.entries = {}
+	Tracker.entries, Tracker.playerCount = {}, 0
 	lastCount, sinceScan = nil, 0
 end
 
@@ -83,6 +83,7 @@ end
 -- Drops items a player lost and refreshes each kind every update; scans for new ones only when due.
 function Tracker.update(players)
 	if #players == 0 then return end -- transient state: read as everyone leaving, it would wipe the list
+	Tracker.playerCount = #players
 	local byKey, tracked, firstKey = {}, {}, nil
 	for _, p in ipairs(players) do
 		p.key = playerKey(p.player)
