@@ -94,10 +94,19 @@ local function drawClock(pos, color, scale)
 	sprite:Render(pos + ITEM_BOTTOM_RIGHT * scale.X)
 end
 
--- Owner badges only help when the list mixes players; a solo run looks as before.
-local function mixesPlayers(entries)
+-- Whether the type and temporary filters let the entry through.
+local function shown(config, entry)
+	return config[TYPE_FILTER[entry.type]] and (config.showTemporary or not entry.temporary)
+end
+
+-- Owner badges only help when the visible list mixes players; a solo run looks as before.
+local function mixesPlayers(config, entries)
+	local first
 	for _, entry in ipairs(entries) do
-		if entry.owner ~= entries[1].owner then return true end
+		if shown(config, entry) then
+			first = first or entry.owner
+			if entry.owner ~= first then return true end
+		end
 	end
 	return false
 end
@@ -112,12 +121,11 @@ local function drawItems(config, entries, screen, hudPad)
 	local columns = config.columns
 	local slot, lastFloor, padding = 0, "", Vector(0, 0)
 	local owner = config.showPlayer - 1
-	local badges = owner < 0 and mixesPlayers(entries)
+	local badges = owner < 0 and mixesPlayers(config, entries)
 
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
-		if not config[TYPE_FILTER[entry.type]] then goto continue end
-		if entry.temporary and not config.showTemporary then goto continue end
+		if not shown(config, entry) then goto continue end
 		if owner >= 0 and entry.owner ~= owner then goto continue end
 
 		if config.showFloor and entry.floor ~= lastFloor then
@@ -139,7 +147,7 @@ local function drawItems(config, entries, screen, hudPad)
 		if entry.temporary then drawClock(pos, color, scale) end
 		if badges then
 			local corner = pos + ITEM_TOP_LEFT * scale.X
-			fontFloorName:DrawStringScaled(tostring(entry.owner + 1), corner.X, corner.Y, config.textScale, config.textScale, textColor, 0, false)
+			fontFloorName:DrawStringScaled(tostring(entry.owner + 1), corner.X, corner.Y, scale.X, scale.Y, textColor, 0, false)
 		end
 		slot = slot + 1
 		if slot >= limit then return end
