@@ -34,7 +34,8 @@ ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 		local player = Isaac.GetPlayer(i)
 		-- 0, not PlayerVariant.PLAYER: vanilla has no PlayerVariant enum; co-op babies are variant 1.
 		-- Ghosts are left out so their items stay listed under the floors they were found on.
-		if player.Variant == 0 and not player:IsCoopGhost() then table.insert(players, { index = i, player = player }) end
+		-- Helpers with a Parent (the Strawman Keeper; IsaacScript isChildPlayer) are skipped like babies: no P-number, no entries frozen after they despawn.
+		if player.Variant == 0 and not player:IsCoopGhost() and not player.Parent then table.insert(players, { index = i, player = player }) end
 	end
 	tracker.update(players)
 end)
