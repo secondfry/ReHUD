@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metadata>
-    <name>reHUD</name>
-    <directory>rehud</directory>
-    <id>1906405707</id>
+    <name>[REP+] reHUD [Forked]</name>
+    <directory>rehud_repplus</directory>
     <description>Requires Repentance+.
-Adds a more customizable smaller version of the &quot;Extra Hud&quot;, which displays the gametime and a list of collected items on the screen.
+A Repentance+ port of [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1906405707]reHUD[/url] by wofsauge.
+Adds a more customizable smaller version of the &quot;Extra HUD&quot;, which displays the gametime and a list of collected items on the screen.
+
+[h1][b]Disable or unsubscribe the original reHUD when using this fork![/b][/h1]
+Only one of the two runs when both are enabled.
 
 [h1]Features[/h1]
-- [b]Display your last collected items on the screen[/b]. over 100 of them instead of the last 10 in the normal game
-- [b]Customize the display[/b]: Position (Right, Bottom), Amount of Coloumns, Size, Transparency,... (Requires [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]Mod Config Menu Impure[/url]!)
-- [b]Display a more accurate ingame Timer![/b] Precise up to milliseconds ;)
+- [b]Display your collected items on the screen[/b], as many as fit instead of the last 10 in the normal game.
+- [b]Customize the display[/b]: Position (Right, Bottom), Amount of Columns or Rows, Size, Text Size, Transparency, show or hide the timer, items and floor names. Follows the HUD Offset option. (Requires [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]Mod Config Menu Impure[/url]!)
+- [b]Display a more accurate ingame Timer![/b] Precise up to hundredths of a second ;)
 - [b]Filter your items[/b]. Display Passives or only Familiars, with or without temporary items (Lemegeton wisps, Zodiac, 3 Dollar Bill).
-- [b]Sort your items[/b]. Order them by the floor they are collected on. 
+- [b]Sort your items[/b]. Newest first, grouped under the name of the floor they were collected on.
 
 [h1][b]Disable &quot;Extra HUD&quot; in the Options menu when using this mod [/b][/h1]
 
@@ -22,8 +25,10 @@ Adds a more customizable smaller version of the &quot;Extra Hud&quot;, which dis
 
 
 [h1]Special Thanks[/h1]
+to wofsauge for the original reHUD!
 to Piber for the Mod config menu!
-to Skojanza for helping me bugfix this mod</description>
+to Skojanza for helping bugfix the original mod
+to _Kilburn for the screen-size helper in the original mod</description>
     <version>2.0</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
