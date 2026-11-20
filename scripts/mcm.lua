@@ -1,7 +1,7 @@
 -- Settings page for Mod Config Menu Impure. ReHUD keeps owning its config and save; MCM only edits the table.
 local Mcm = {}
 
-local MOD, CATEGORY = "ReHUD", "General"
+local MOD_NAME, CATEGORY = "ReHUD", "General"
 local STEPS = { 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 0.8, 0.9, 1 } -- size, text size and transparency
 local POSITIONS = { "default", "bottom" }
 
@@ -16,7 +16,7 @@ end
 
 -- `invert` is for "disable", which the menu shows as "Show HUD".
 local function addBoolean(config, key, label, invert)
-	MCM.AddSetting(MOD, CATEGORY, {
+	MCM.AddSetting(MOD_NAME, CATEGORY, {
 		Type = MCM.OptionType.BOOLEAN,
 		CurrentSetting = function() return config[key] end,
 		Display = function()
@@ -31,7 +31,7 @@ end
 local function addNumber(setting)
 	setting.Type = MCM.OptionType.NUMBER
 	setting.Minimum = 1
-	MCM.AddSetting(MOD, CATEGORY, setting)
+	MCM.AddSetting(MOD_NAME, CATEGORY, setting)
 end
 
 local function addStep(config, key, label)
@@ -70,9 +70,10 @@ function Mcm.register(config)
 		OnChange = function(columns) config.columns = columns end,
 	})
 	addStep(config, "transparency", "Transparency: ")
-	MCM.AddSpace(MOD, CATEGORY)
+	MCM.AddSpace(MOD_NAME, CATEGORY)
 	addBoolean(config, "showPassive", "Show passive items: ")
 	addBoolean(config, "showFamiliar", "Show familiar items: ")
+	-- Show active items (placeholder from the original: config.showActive has no menu entry yet)
 end
 
 return Mcm

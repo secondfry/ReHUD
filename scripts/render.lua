@@ -1,6 +1,8 @@
 local Render = {}
 
 local game = Game()
+local itemConfig = Isaac.GetItemConfig()
+local sprites = {} -- by collectible id, built on first draw
 
 local fontTimer = Font()
 fontTimer:Load("font/pftempestasevencondensed.fnt")
@@ -58,6 +60,18 @@ local function maxDisplay(config, screen, hudPad, size)
 	return math.floor(fillable / size * config.columns)
 end
 
+local function spriteFor(id)
+	if sprites[id] then return sprites[id] end
+	local sprite = Sprite()
+	sprite:Load("gfx/005.100_collectible.anm2", false)
+	sprite:Play("ShopIdle")
+	sprite:ReplaceSpritesheet(1, itemConfig:GetCollectible(id).GfxFileName)
+	sprite:LoadGraphics()
+	sprite:Update()
+	sprites[id] = sprite
+	return sprite
+end
+
 -- Newest item first.
 local function drawItems(config, entries, screen, hudPad)
 	local size = 32 * config.spriteScale
@@ -70,22 +84,25 @@ local function drawItems(config, entries, screen, hudPad)
 
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
-		if config[TYPE_FILTER[entry.type]] then
-			if config.showFloor and entry.floor ~= lastFloor then
-				if slot % columns ~= 0 then slot = slot + columns - slot % columns end
-				local offset, step = floorNameLayout(config, size, slot)
-				local pos = slotPosition(config, screen, hudPad, size, slot) + padding + offset
-				fontFloorName:DrawStringScaled(entry.floor, pos.X, pos.Y, config.textScale, config.textScale, textColor, 0, false)
-				lastFloor = entry.floor
-				padding = padding + step
-			end
+		if not config[TYPE_FILTER[entry.type]] then goto continue end
 
-			entry.sprite.Color = color
-			entry.sprite.Scale = scale
-			entry.sprite:Render(slotPosition(config, screen, hudPad, size, slot) + padding)
-			slot = slot + 1
+		if config.showFloor and entry.floor ~= lastFloor then
+			slot = math.ceil(slot / columns) * columns
 			if slot >= limit then return end
+			local offset, step = floorNameLayout(config, size, slot)
+			local pos = slotPosition(config, screen, hudPad, size, slot) + padding + offset
+			fontFloorName:DrawStringScaled(entry.floor, pos.X, pos.Y, config.textScale, config.textScale, textColor, 0, false)
+			lastFloor = entry.floor
+			padding = padding + step
 		end
+
+		local sprite = spriteFor(entry.id)
+		sprite.Color = color
+		sprite.Scale = scale
+		sprite:Render(slotPosition(config, screen, hudPad, size, slot) + padding)
+		slot = slot + 1
+		if slot >= limit then return end
+		::continue::
 	end
 end
 

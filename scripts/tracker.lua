@@ -1,23 +1,13 @@
--- Collected-item list of player 0, oldest first. Each entry: { id, floor, type, sprite }.
+-- Collected-item list of player 0, oldest first. Each entry: { id, floor, type }.
 local Tracker = { entries = {} }
 
 local itemConfig = Isaac.GetItemConfig()
 local maxCollectibleID = itemConfig:GetCollectibles().Size - 1 -- includes modded items
 
-local function newSprite(gfxFileName)
-	local sprite = Sprite()
-	sprite:Load("gfx/005.100_collectible.anm2", false)
-	sprite:Play("ShopIdle")
-	sprite:ReplaceSpritesheet(1, gfxFileName)
-	sprite:LoadGraphics()
-	sprite:Update()
-	return sprite
-end
-
 local function add(id, floor)
 	local item = itemConfig:GetCollectible(id)
 	if not item then return end
-	table.insert(Tracker.entries, { id = id, floor = floor, type = item.Type, sprite = newSprite(item.GfxFileName) })
+	table.insert(Tracker.entries, { id = id, floor = floor, type = item.Type })
 end
 
 local function currentFloorName()

@@ -3,7 +3,8 @@
     <name>reHUD</name>
     <directory>rehud</directory>
     <id>1906405707</id>
-    <description>Adds a more customizable smaller version of the &quot;Extra Hud&quot;, which displays the gametime and a list of collected items on the screen.
+    <description>Requires Repentance+.
+Adds a more customizable smaller version of the &quot;Extra Hud&quot;, which displays the gametime and a list of collected items on the screen.
 
 [h1]Features[/h1]
 - [b]Display your last collected items on the screen[/b]. over 100 of them instead of the last 10 in the normal game

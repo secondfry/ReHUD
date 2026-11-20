@@ -16,23 +16,22 @@ end
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function(_, isContinued)
 	mcm.register(config)
-	save.read(ReHUD, config, tracker, isContinued)
+	local ids, floors = save.read(ReHUD, config)
+	if isContinued then tracker.restore(ids, floors) else tracker.reset() end
 	gameStarted = true
 end)
 
 ReHUD:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
-	save.write(ReHUD, config, tracker)
-	tracker.reset()
+	save.write(ReHUD, config, tracker.serialize())
 	gameStarted = false
 end)
 
--- Only player 0 is tracked; the callback fires for every player, so act on player 0's own update.
-ReHUD:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
+-- Only player 0 is tracked.
+ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 	if not gameStarted then return end
-	local main = Isaac.GetPlayer(0)
-	if not main or GetPtrHash(player) ~= GetPtrHash(main) then return end
-	if main:IsCoopGhost() then return end -- keep the list instead of wiping it while player 0 is a ghost
-	tracker.update(main)
+	local player = Isaac.GetPlayer(0)
+	if player:IsCoopGhost() then return end -- keep the list instead of wiping it while player 0 is a ghost
+	tracker.update(player)
 end)
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_RENDER, function()

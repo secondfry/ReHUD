@@ -3,25 +3,34 @@ local json = require("json")
 
 local Save = {}
 
-function Save.write(mod, config, tracker)
-	local ids, floors = tracker.serialize()
+-- Match the MCM entries; other values break layout maths or menu labels.
+local MAX = { columns = 8, position = 2 }
+
+-- The save file is untrusted: unknown keys, wrong types and out-of-range numbers keep the default.
+local function mergeConfig(config, saved)
+	if type(saved) ~= "table" then return end
+	for key, value in pairs(saved) do
+		local valid = type(value) == type(config[key])
+		if valid and MAX[key] then
+			valid = math.type(value) == "integer" and value >= 1 and value <= MAX[key]
+		end
+		if valid then config[key] = value end
+	end
+end
+
+function Save.write(mod, config, ids, floors)
 	mod:SaveData(json.encode({ config = config, items = ids, floor = floors }))
 end
 
--- Settings always carry over; the item list only when the run is continued.
-function Save.read(mod, config, tracker, isContinued)
-	tracker.reset()
+-- Merges saved settings into `config` and returns the saved item ids and floor names (nil if there is no usable save).
+function Save.read(mod, config)
 	if not mod:HasData() then return end
 
 	local ok, data = pcall(json.decode, mod:LoadData())
 	if not ok or type(data) ~= "table" then return end
 
-	if type(data.config) == "table" then
-		for key, value in pairs(data.config) do
-			if type(value) == type(config[key]) then config[key] = value end -- skips unknown keys and wrong types
-		end
-	end
-	if isContinued then tracker.restore(data.items, data.floor) end
+	mergeConfig(config, data.config)
+	return data.items, data.floor
 end
 
 return Save
