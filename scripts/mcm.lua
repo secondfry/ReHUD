@@ -4,7 +4,6 @@ local Mcm = {}
 local MOD_NAME, CATEGORY = "ReHUD", "General"
 local STEPS = { 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 0.8, 0.9, 1 } -- size, text size and transparency
 local POSITIONS = { "default", "bottom" }
-local PLAYERS = { "All", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8" } -- showPlayer 0..8 (4 players, each possibly Jacob & Esau or Tainted Lazarus); the menu counts from 1
 
 local registered = false
 local menu -- Impure sets both MCM and ModConfigMenu; Pure only ModConfigMenu
@@ -47,7 +46,8 @@ local function addStep(config, key, label)
 end
 
 -- Safe to call repeatedly: registers once, as soon as MCM is loaded (load order between mods is not guaranteed).
-function Mcm.register(config)
+-- `characterCount()`: how many character numbers the run has handed out, for the "Show items of" range.
+function Mcm.register(config, characterCount)
 	if registered then return end
 	-- Impure sets MCM and ModConfigMenu, Pure only ModConfigMenu; skip an unrelated MCM global.
 	menu = (MCM and MCM.AddSetting and MCM) or ModConfigMenu
@@ -82,12 +82,19 @@ function Mcm.register(config)
 	addBoolean(config, "showActive", "Show active items: ")
 	addBoolean(config, "showTemporary", "Show temporary items: ", false,
 		"Optional: also list items you only hold temporarily, e.g. from Lemegeton wisps, Zodiac or 3 Dollar Bill.")
-	addNumber({
+	addBoolean(config, "showLeft", "Show items of players who left: ", false,
+		"Optional: keep listing the items of co-op players who left the run.")
+	-- showPlayer 0 is All, n is character n; the menu counts from 1.
+	local showPlayer = {
 		CurrentSetting = function() return config.showPlayer + 1 end,
-		Maximum = #PLAYERS,
-		Display = function() return "Show items of: " .. PLAYERS[config.showPlayer + 1] end,
 		OnChange = function(index) config.showPlayer = index - 1 end,
-	})
+	}
+	showPlayer.Display = function()
+		showPlayer.Maximum = math.max(characterCount(), 1) + 1 -- MCM reads Maximum on every press, and Display runs every menu frame
+		return "Show items of: " .. (config.showPlayer == 0 and "All" or "P" .. config.showPlayer)
+	end
+	showPlayer.Maximum = 2
+	addNumber(showPlayer)
 end
 
 return Mcm

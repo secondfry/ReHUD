@@ -15,9 +15,9 @@ function ReHUD:isActive()
 end
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function(_, isContinued)
-	mcm.register(config)
-	local ids, floors, owners, numbers, swaps = save.read(ReHUD, config)
-	if isContinued then tracker.restore(ids, floors, owners, numbers, swaps) else tracker.reset() end
+	mcm.register(config, tracker.knownCharacters)
+	local ids, floors, owners, numbers, rows = save.read(ReHUD, config)
+	if isContinued then tracker.restore(ids, floors, owners, numbers, rows) else tracker.reset() end
 	gameStarted = true
 end)
 
@@ -42,7 +42,7 @@ ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 end)
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_RENDER, function()
-	render.draw(config, tracker.entries, tracker.characterCount)
+	render.draw(config, tracker.entries, tracker.characterCount, tracker.leftCount)
 end)
 
-mcm.register(config)
+mcm.register(config, tracker.knownCharacters)

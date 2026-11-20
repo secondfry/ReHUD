@@ -94,13 +94,13 @@ local function drawClock(pos, color, scale)
 	sprite:Render(pos + ITEM_BOTTOM_RIGHT * scale.X)
 end
 
--- Whether the type, temporary and player filters let the entry through.
+-- Whether the type, temporary, left-the-run and player filters let the entry through.
 local function shown(config, entry)
-	return config[TYPE_FILTER[entry.type]] and (config.showTemporary or not entry.temporary)
+	return config[TYPE_FILTER[entry.type]] and (config.showTemporary or not entry.temporary) and (config.showLeft or not entry.left)
 		and (config.showPlayer == 0 or entry.number == config.showPlayer - 1)
 end
 
--- Newest item first. showPlayer 0 lists everyone, badged with the character number once a second character is known (a solo run looks as before); 1..8 only that character.
+-- Newest item first. showPlayer 0 lists everyone, badged with the character number once a second character is known (a solo run looks as before); n only character n.
 local function drawItems(config, entries, characterCount, screen, hudPad)
 	local size = 32 * config.spriteScale
 	local limit = maxDisplay(config, screen, hudPad, size)
@@ -142,13 +142,13 @@ local function drawItems(config, entries, characterCount, screen, hudPad)
 	end
 end
 
--- `characterCount`: characters with a list at the last tracker update.
-function Render.draw(config, entries, characterCount)
+-- `characterCount`, `leftCount`: characters with a list at the last tracker update, and players who left with one (counted only when shown).
+function Render.draw(config, entries, characterCount, leftCount)
 	if config.disable then return end
 	local screen = Vector(Isaac.GetScreenWidth(), Isaac.GetScreenHeight())
 	local hudPad = HUD_OFFSET_MAX * Options.HUDOffset
 	if config.showTimer then drawTimer(config, screen, hudPad) end
-	if config.showItems then drawItems(config, entries, characterCount, screen, hudPad) end
+	if config.showItems then drawItems(config, entries, characterCount + (config.showLeft and leftCount or 0), screen, hudPad) end
 end
 
 return Render
