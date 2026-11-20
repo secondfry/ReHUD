@@ -5,7 +5,7 @@ A Repentance+ fork of [reHUD](https://steamcommunity.com/sharedfiles/filedetails
 
 **Disable or unsubscribe the original reHUD when using this fork:** only one of the two runs when both are enabled.
 
-Settings need [Mod Config Menu Impure](https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951) (recommended); [Mod Config Menu Pure](https://steamcommunity.com/sharedfiles/filedetails/?id=2681875787) works too.
+Settings need [Mod Config Menu Impure](https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951). Mod Config Menu Pure works too if you already use it; do not enable both.
 
 ## Special Thanks
 - wofsauge for the original reHUD

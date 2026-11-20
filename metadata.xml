@@ -12,7 +12,7 @@ Only one of the two runs when both are enabled.
 
 [h1]Features[/h1]
 - [b]Display your collected items on the screen[/b], as many as fit, instead of the vanilla Extra HUD's short list.
-- [b]Customize the display[/b]: Position (Default: under the minimap, Bottom), Amount of Columns or Rows, Size, Text Size, Transparency, show or hide the timer, items and floor names. Follows the HUD Offset option. (Requires [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]Mod Config Menu Impure[/url] (recommended) or [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2681875787]Mod Config Menu Pure[/url]!)
+- [b]Customize the display[/b]: Position (Default: under the minimap, Bottom), Amount of Columns or Rows, Size, Text Size, Transparency, show or hide the timer, items and floor names. Follows the HUD Offset option. (Requires [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]Mod Config Menu Impure[/url]!)
 - [b]Display a more accurate ingame Timer![/b] Shows hundredths of a second ;)
 - [b]Filter your items[/b]. Display passives, familiars and/or actives, with or without temporary items (Lemegeton wisps, Zodiac, 3 Dollar Bill), which are marked with a small clock.
 - [b]Sort your items[/b]. Newest first, grouped under the name of the floor they were collected on.
@@ -20,7 +20,8 @@ Only one of the two runs when both are enabled.
 [h1][b]Disable &quot;Extra HUD&quot; in the Options menu when using this mod [/b][/h1]
 
 
-[h1]You need [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]&quot;Mod Config Menu Impure&quot;[/url] (recommended) or [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2681875787]&quot;Mod Config Menu Pure&quot;[/url] to customize this mod![/h1]
+[h1]You need [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]&quot;Mod Config Menu Impure&quot;[/url] to customize this mod![/h1]
+Already using Mod Config Menu Pure? It works too; do not enable both.
 
 [b]This mod does [u]not[/u] disable achievements![/b]
 
