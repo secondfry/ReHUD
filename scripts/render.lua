@@ -97,7 +97,7 @@ end
 -- Whether the type, temporary and player filters let the entry through.
 local function shown(config, entry)
 	return config[TYPE_FILTER[entry.type]] and (config.showTemporary or not entry.temporary)
-		and (config.showPlayer == 0 or entry.owner == config.showPlayer - 1)
+		and (config.showPlayer == 0 or entry.number == config.showPlayer - 1)
 end
 
 -- Owner badges only help when the visible list mixes players; a solo run looks as before.
@@ -146,7 +146,7 @@ local function drawItems(config, entries, screen, hudPad)
 		if entry.temporary then drawClock(pos, color, scale) end
 		if badges then
 			local corner = pos + ITEM_TOP_LEFT * scale.X
-			fontFloorName:DrawStringScaled(tostring(entry.owner + 1), corner.X, corner.Y, scale.X, scale.Y, textColor, 0, false)
+			fontFloorName:DrawStringScaled(tostring(entry.number + 1), corner.X, corner.Y, scale.X, scale.Y, textColor, 0, false)
 		end
 		slot = slot + 1
 		if slot >= limit then return end

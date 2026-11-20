@@ -1,4 +1,5 @@
--- Collected items per player, oldest first. Each entry: { id, owner, floor, type, temporary }; the same item held by two players is two entries.
+-- Collected items per player, oldest first. Each entry: { id, owner, number, floor, type, temporary }; the same item held by two players is two entries.
+-- `owner` is the player's identity (see playerKey); `number` is his Isaac.GetPlayer index, refreshed while he is present and kept as last seen once he is a ghost or gone.
 local Tracker = { entries = {} }
 
 local itemConfig = Isaac.GetItemConfig()
@@ -8,10 +9,21 @@ local maxCollectibleID = itemConfig:GetCollectibles().Size - 1 -- includes modde
 local SCAN_INTERVAL = 30
 local lastCount, sinceScan = nil, 0 -- summed GetCollectibleCount() at the last scan and updates since; nil forces a scan
 
-local function add(id, owner, floor, temporary)
+local function add(id, owner, number, floor, temporary)
 	local item = itemConfig:GetCollectible(id)
 	if not item then return end
-	table.insert(Tracker.entries, { id = id, owner = owner, floor = floor, type = item.Type, temporary = temporary })
+	table.insert(Tracker.entries, { id = id, owner = owner, number = number, floor = floor, type = item.Type, temporary = temporary })
+end
+
+-- The GetPlayer index shifts when a co-op player leaves; the Sad Onion RNG seed stays the player's for the whole run, saves included (IsaacScript getPlayerIndex).
+local function playerKey(player)
+	return player:GetCollectibleRNG(1):GetSeed()
+end
+
+-- A saved integer of at least 0 (integral floats count), else nil.
+local function savedInteger(value)
+	local n = type(value) == "number" and math.tointeger(value)
+	if n and n >= 0 then return n end
 end
 
 local function currentFloorName()
@@ -43,48 +55,52 @@ function Tracker.reset()
 	lastCount, sinceScan = nil, 0
 end
 
--- Rebuild from the saved parallel arrays; entries whose item no longer exists are dropped. Saves without owners predate co-op tracking: player 0.
-function Tracker.restore(ids, floors, owners)
+-- Rebuild from the saved parallel arrays; entries whose item no longer exists are dropped.
+-- A missing or malformed owner (saves from before co-op tracking) is left unset and becomes whoever is player 0 on the next update; a bad number shows as P1.
+function Tracker.restore(ids, floors, owners, numbers)
 	Tracker.reset()
 	if type(ids) ~= "table" or type(floors) ~= "table" then return end
 	if type(owners) ~= "table" then owners = {} end
+	if type(numbers) ~= "table" then numbers = {} end
 	for i, id in ipairs(ids) do
 		if type(id) ~= "number" then goto continue end
-		local owner = owners[i]
-		if math.type(owner) ~= "integer" or owner < 0 or owner > 3 then owner = 0 end -- the player filter supports 4 players
-		add(id, owner, tostring(floors[i] or ""))
+		add(id, savedInteger(owners[i]), savedInteger(numbers[i]) or 0, tostring(floors[i] or ""))
 		::continue::
 	end
 end
 
 function Tracker.serialize()
-	local ids, floors, owners = {}, {}, {}
+	local ids, floors, owners, numbers = {}, {}, {}, {}
 	for i, entry in ipairs(Tracker.entries) do
-		ids[i], floors[i], owners[i] = entry.id, entry.floor, entry.owner
+		-- false, not nil, for an unresolved owner: the game's json.lua drops nulls from arrays, which would shift later owners.
+		ids[i], floors[i], owners[i], numbers[i] = entry.id, entry.floor, entry.owner or false, entry.number
 	end
-	return ids, floors, owners
+	return ids, floors, owners, numbers
 end
 
--- `players`: living players as { index, player }. Entries of anyone not listed (a co-op ghost) stay as they are.
+-- `players`: living players as { index, player }. Entries of anyone not listed (a co-op ghost, a player who left) stay as they are.
 -- Drops items a player lost and refreshes each kind every update; scans for new ones only when due.
 function Tracker.update(players)
-	local byIndex, tracked = {}, {}
+	local byKey, tracked, firstKey = {}, {}, nil
 	for _, p in ipairs(players) do
-		byIndex[p.index], tracked[p.index] = p.player, {}
+		p.key = playerKey(p.player)
+		byKey[p.key], tracked[p.key] = p, {}
+		if p.index == 0 then firstKey = p.key end
 	end
 
 	local entries = Tracker.entries
 	for i = #entries, 1, -1 do
 		local entry = entries[i]
-		local player = byIndex[entry.owner]
-		if not player then goto continue end -- ghost: frozen
-		local held, temporary = holding(player, entry.id)
-		if not held or tracked[entry.owner][entry.id] then
+		entry.owner = entry.owner or firstKey
+		local p = byKey[entry.owner]
+		if not p then goto continue end -- ghost or gone: frozen
+		local held, temporary = holding(p.player, entry.id)
+		if not held or tracked[p.key][entry.id] then
 			table.remove(entries, i)
 			goto continue
 		end
-		tracked[entry.owner][entry.id] = true
-		entry.temporary = temporary
+		tracked[p.key][entry.id] = true
+		entry.number, entry.temporary = p.index, temporary
 		::continue::
 	end
 
@@ -94,9 +110,9 @@ function Tracker.update(players)
 	for id = 1, maxCollectibleID do
 		if not itemConfig:GetCollectible(id) then goto nextId end
 		for _, p in ipairs(players) do
-			if tracked[p.index][id] then goto nextPlayer end
+			if tracked[p.key][id] then goto nextPlayer end
 			local held, temporary = holding(p.player, id)
-			if held then add(id, p.index, floor, temporary) end
+			if held then add(id, p.key, p.index, floor, temporary) end
 			::nextPlayer::
 		end
 		::nextId::

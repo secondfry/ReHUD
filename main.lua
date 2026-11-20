@@ -16,8 +16,8 @@ end
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function(_, isContinued)
 	mcm.register(config)
-	local ids, floors, owners = save.read(ReHUD, config)
-	if isContinued then tracker.restore(ids, floors, owners) else tracker.reset() end
+	local ids, floors, owners, numbers = save.read(ReHUD, config)
+	if isContinued then tracker.restore(ids, floors, owners, numbers) else tracker.reset() end
 	gameStarted = true
 end)
 
@@ -26,8 +26,7 @@ ReHUD:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
 	gameStarted = false
 end)
 
--- Each living player's items are tracked under his index; co-op babies (variant 1) are skipped.
--- shortcut: identity is the GetPlayer index, which shifts if a co-op player leaves mid-run; key by GetPlayerType/InitSeed if that gets reported.
+-- Each living player is passed with his GetPlayer index, shown as his number; co-op babies (variant 1) are skipped.
 ReHUD:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 	if not gameStarted then return end
 	local players = {}
