@@ -8,7 +8,7 @@ local roster = include("scripts.roster")
 local itemConfig = Isaac.GetItemConfig()
 local maxCollectibleID = itemConfig:GetCollectibles().Size - 1 -- includes modded items
 
--- shortcut: 3 Dollar Bill grants have no change signal, so a full scan also runs every SCAN_INTERVAL updates; hook grant callbacks if the delay shows.
+-- shortcut: 3 Dollar Bill grants and same-count swaps (rerolls: D4, D100, Spindown) have no change signal, so a full scan also runs every SCAN_INTERVAL updates; hook grant callbacks if the delay shows.
 local SCAN_INTERVAL = 30
 local lastCount, sinceScan = nil, 0 -- scan trigger value at the last scan and updates since; nil forces a scan
 local ordered -- display order of the entries, rebuilt by Tracker.ordered() after any change; nil means stale
@@ -113,7 +113,7 @@ end
 -- Rebuild from the saved parallel arrays and roster rows ({ key, number, group, swapped, left, innate = { { type, ids } } }); entries whose item no longer exists are dropped.
 -- An owner that is missing (saves from before co-op tracking), malformed or without a valid roster row is left unset
 -- and goes to whoever is living player 0 on a later update; until then the items show as character 1.
--- A missing `temporary` (saves before 2.7) leaves the kind unknown: the first update fills copies without a clock first.
+-- A missing `temporary` (saves before 2.8) leaves the kind unknown: the first update fills copies without a clock first.
 function Tracker.restore(ids, floors, owners, rows, temporaries)
 	Tracker.reset()
 	if type(rows) == "table" then
@@ -142,8 +142,8 @@ end
 function Tracker.serialize()
 	local ids, floors, owners, temporaries = {}, {}, {}, {}
 	for i, entry in ipairs(Tracker.entries) do
-		-- false, not nil, for an unresolved owner or kind: the game's json.lua drops nulls from arrays, which would shift later values.
-		ids[i], floors[i], owners[i], temporaries[i] = entry.id, entry.floor, entry.owner or false, entry.temporary == true
+		-- false for an unresolved owner and 0 for an unknown kind, not nil: the game's json.lua drops nulls from arrays, which would shift later values.
+		ids[i], floors[i], owners[i], temporaries[i] = entry.id, entry.floor, entry.owner or false, entry.temporary == nil and 0 or entry.temporary
 	end
 	return ids, floors, owners, roster.serialize(), temporaries
 end

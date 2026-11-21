@@ -1,5 +1,5 @@
 -- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { character keys }, temporary = { booleans }, roster = { { key, number, group, swapped, left, innate = { { type, ids } } } } };
--- earlier versions wrote neither owner nor roster, older saves have no innate, and saves before 2.7 no temporary.
+-- earlier versions wrote neither owner nor roster, older saves have no innate, and saves before 2.8 no temporary.
 local json = require("json")
 
 local Save = {}
