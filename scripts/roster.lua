@@ -118,6 +118,7 @@ function Roster.observe(players)
 	for _, p in ipairs(players) do lost[groupOf[p.key]] = (lost[groupOf[p.key]] or 0) - 1 end
 	for _, old in pairs(before) do
 		if byKey[old] or swapped[old] then goto nextOld end
+		-- shortcut: a Flip or Esau Jr. swap in the same update as another group's count change (a co-op leave, or a Clicker merge or split) is not seen as a swap, so the swapped-out form reads as left (items kept, hidden) until it plays again; compare counts per group if that gets reported.
 		merged[old] = (lost[groupOf[old]] or 0) > 0 and presentIn(players, groupOf[old]) or nil -- a group that kept its count swapped, so a co-op leave beside it stays a leave
 		if merged[old] and TAINTED_LAZARUS[typeOf[old]] and TAINTED_LAZARUS[typeOf[merged[old]]] then
 			swapped[old], merged[old] = true, nil -- Birthright lost: Flip stores the other form again
