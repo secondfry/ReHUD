@@ -27,6 +27,24 @@ local function savedInteger(value)
 	if n and n >= 0 then return n end
 end
 
+-- Saved innate sets ({ { type, ids } }) by player type; nil when anything is malformed, so the character re-learns.
+local function savedInnate(rows)
+	if type(rows) ~= "table" then return end
+	local sets = {}
+	for _, row in pairs(rows) do
+		local playerType = type(row) == "table" and savedInteger(row.type)
+		if not playerType or type(row.ids) ~= "table" then return end
+		local set = {}
+		for _, id in pairs(row.ids) do
+			id = savedInteger(id)
+			if not id then return end
+			set[id] = true
+		end
+		sets[playerType] = set
+	end
+	return sets
+end
+
 local function currentFloorName()
 	if StageAPI and StageAPI.Loaded and StageAPI.InOverriddenStage() then
 		local name = StageAPI.GetCurrentStageDisplayName()
@@ -35,10 +53,11 @@ local function currentFloorName()
 	return Game():GetLevel():GetName()
 end
 
--- Whether the player has the item at all, and whether only through modifiers.
-local function holding(player, id)
-	local real = player:GetCollectibleNum(id, true)
-	return real > 0 or player:GetCollectibleNum(id, false) > 0, real == 0
+-- Whether the player `p` has the item at all, and whether only through temporary modifiers (innate items: see roster.lua).
+local function holding(p, id, wasTemporary)
+	if p.player:GetCollectibleNum(id, true) > 0 then return true, false end
+	if p.player:GetCollectibleNum(id, false) == 0 then return false end
+	return true, not roster.isInnate(p.key, id, wasTemporary)
 end
 
 local function size(set)
@@ -47,12 +66,15 @@ local function size(set)
 	return n
 end
 
--- Due when the total collectible count moved or the fixed cadence elapsed.
+-- Due when the total collectible count moved, the fixed cadence elapsed or a character is settling.
 local function scanDue(players)
-	local count = 0
-	for _, p in ipairs(players) do count = count + p.player:GetCollectibleCount() end
+	local count, settling = 0, false
+	for _, p in ipairs(players) do
+		count = count + p.player:GetCollectibleCount()
+		settling = settling or (not p.ghost and roster.isSettling(p.key))
+	end
 	sinceScan = sinceScan + 1
-	if count == lastCount and sinceScan < SCAN_INTERVAL then return false end
+	if count == lastCount and sinceScan < SCAN_INTERVAL and not settling then return false end
 	lastCount, sinceScan = count, 0
 	return true
 end
@@ -63,7 +85,7 @@ function Tracker.reset()
 	roster.reset()
 end
 
--- Rebuild from the saved parallel arrays and roster rows ({ key, number, group, swapped, left }); entries whose item no longer exists are dropped.
+-- Rebuild from the saved parallel arrays and roster rows ({ key, number, group, swapped, left, innate = { { type, ids } } }); entries whose item no longer exists are dropped.
 -- An owner that is missing (saves from before co-op tracking), malformed or without a valid roster row is left unset
 -- and goes to whoever is living player 0 on a later update; until then the items show as character 1.
 function Tracker.restore(ids, floors, owners, rows)
@@ -72,7 +94,7 @@ function Tracker.restore(ids, floors, owners, rows)
 		for _, row in ipairs(rows) do
 			if type(row) ~= "table" then goto nextRow end
 			local key, number = savedInteger(row.key), savedInteger(row.number)
-			if key and number then roster.claim(key, number, row.swapped == true, row.left == true, savedInteger(row.group)) end
+			if key and number then roster.claim(key, number, row.swapped == true, row.left == true, savedInteger(row.group), savedInnate(row.innate)) end
 			::nextRow::
 		end
 	end
@@ -124,7 +146,7 @@ function Tracker.update(players)
 		end
 		entry.left = nil -- back in the run
 		if p.ghost then goto continue end -- frozen
-		local held, temporary = holding(p.player, entry.id)
+		local held, temporary = holding(p, entry.id, entry.temporary)
 		if not held or tracked[p.key][entry.id] then
 			table.remove(entries, i)
 			ordered = nil
@@ -143,7 +165,7 @@ function Tracker.update(players)
 		if not itemConfig:GetCollectible(id) then goto nextId end
 		for _, p in ipairs(players) do
 			if p.ghost or tracked[p.key][id] then goto nextPlayer end
-			local held, temporary = holding(p.player, id)
+			local held, temporary = holding(p, id)
 			if held then add(id, p.key, roster.number(p.key), floor, temporary) end
 			::nextPlayer::
 		end
