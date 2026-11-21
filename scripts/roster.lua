@@ -1,5 +1,5 @@
 -- Who the playable characters are: a key per character, the 0-based number it got when first seen (kept for the run), the player group it belongs to,
--- whether it is swapped out or left the run, and its innate item counts per player type.
+-- whether it is swapped out or left the run, and its innate item counts per player type, and which characters merged into another of their group (see Roster.observe).
 local Roster = {}
 
 local numberOf, nextNumber = {}, 0 -- character number by key, and the next free one
@@ -11,10 +11,10 @@ local groupOf, groupFor, nextGroup = {}, {}, 0
 
 -- Tainted Lazarus's Flip and Esau Jr. put another character (own seed) at the same GetPlayer index and store the old one: that character's items are frozen like a ghost's, and shown, rather than marked as left.
 -- When a player leaves, the player's swapped-out forms leave too: nobody is left to swap them back (see Roster.markLeft).
--- A character that vanishes, not swapped out, while another of its group is still present is a character who left, not a player: it merged into that one
+-- A character that vanishes, not swapped out, while another living one of its group is still present (a ghost cannot use Clicker), and its group has fewer members than at the last update, is a character who left, not a player: it merged into that one
 -- (Clicker turning Jacob & Esau into one character moves Esau's owned items to it, in-game 2026-11-21). It is forgotten, and observe returns it so the tracker moves its items.
--- shortcut: a co-op leave in the same update as another player's Flip or Esau Jr. swap drops the player count, so that swap reads as a merge and the swapped-out form's items go; compare per group if that gets reported.
--- Clicker out of Tainted Lazarus keeps only the clicking form's items (wiki), so a swapped-out form whose group now plays another character is forgotten too, and its items go.
+-- A swapped-out Tainted Lazarus form whose group now plays a former Tainted Lazarus form as another character merges into it like Esau: Clicker and ChangePlayerType out of Tainted Lazarus gave the new character both forms' items (in-game 2026-11-21). Should the engine drop them (the wiki's claim for Clicker), the moved copies leave once the survivor settles.
+-- shortcut: Esau Jr. used by Tainted Lazarus, then Clicker on the Esau Jr. form, merges the stored original form too, so its items go and it returns renumbered; tell the Flip partner from an Esau Jr. original if that gets reported.
 -- shortcut: after a continue a swapped-out form's type is unknown until it plays again, so it stays swapped; save the type if that gets reported.
 local swapped, keyAt, lastPlayers = {}, {}, 0 -- swapped-out keys; key by GetPlayer index and player count at the last observe
 local left = {} -- keys of players who left the run; their items stay, hidden unless the menu shows them
@@ -74,10 +74,15 @@ local function forget(key)
 	innateOf[key], typeOf[key], settleRemaining[key] = nil, nil, nil
 end
 
--- Key of the first of `players` in the group; with `notLazarus`, the first that is neither a ghost nor a Tainted Lazarus form.
-local function presentIn(players, group, notLazarus)
+-- A Tainted Lazarus form turned into another character (Clicker, ChangePlayerType): it settled as one and is none now.
+local function wasLazarus(key)
+	return not TAINTED_LAZARUS[typeOf[key]] and (innateOf[key][PlayerType.PLAYER_LAZARUS_B] or innateOf[key][PlayerType.PLAYER_LAZARUS2_B]) ~= nil
+end
+
+-- Key of the first living one of `players` in the group that passes `test`, if given.
+local function presentIn(players, group, test)
 	for _, p in ipairs(players) do
-		if groupOf[p.key] == group and not (notLazarus and (p.ghost or TAINTED_LAZARUS[typeOf[p.key]])) then return p.key end
+		if groupOf[p.key] == group and not p.ghost and (not test or test(p.key)) then return p.key end
 	end
 end
 
@@ -107,16 +112,21 @@ function Roster.observe(players)
 		now[p.index] = p.key
 		if not p.ghost then settle(p) end -- a ghost learns once it is back
 	end
-	local before, merged = keyAt, {}
+	local before, merged, lost = keyAt, {}, {} -- lost: members each group has fewer than at the last observe
 	keyAt, lastPlayers = now, #players
+	for _, key in pairs(before) do lost[groupOf[key]] = (lost[groupOf[key]] or 0) + 1 end
+	for _, p in ipairs(players) do lost[groupOf[p.key]] = (lost[groupOf[p.key]] or 0) - 1 end
 	for _, old in pairs(before) do
 		if byKey[old] or swapped[old] then goto nextOld end
-		merged[old] = presentIn(players, groupOf[old])
-		if merged[old] then forget(old) else Roster.markLeft(old) end -- also catches a leaver without items
+		merged[old] = (lost[groupOf[old]] or 0) > 0 and presentIn(players, groupOf[old]) or nil -- a group that kept its count swapped, so a co-op leave beside it stays a leave
+		if merged[old] and TAINTED_LAZARUS[typeOf[old]] and TAINTED_LAZARUS[typeOf[merged[old]]] then
+			swapped[old], merged[old] = true, nil -- Birthright lost: Flip stores the other form again
+		elseif merged[old] then forget(old) else Roster.markLeft(old) end -- also catches a leaver without items
 		::nextOld::
 	end
 	for key in pairs(swapped) do
-		if TAINTED_LAZARUS[typeOf[key]] and presentIn(players, groupOf[key], true) then forget(key) end
+		local into = TAINTED_LAZARUS[typeOf[key]] and presentIn(players, groupOf[key], wasLazarus)
+		if into then merged[key] = into; forget(key) end
 	end
 	return byKey, merged
 end
