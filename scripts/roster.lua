@@ -11,8 +11,14 @@ local groupOf, groupFor, nextGroup = {}, {}, 0
 
 -- Tainted Lazarus's Flip and Esau Jr. put another character (own seed) at the same GetPlayer index and store the old one: that character's items are frozen like a ghost's, and shown, rather than marked as left.
 -- When a player leaves, the player's swapped-out forms leave too: nobody is left to swap them back (see Roster.markLeft).
+-- A character that vanishes, not swapped out, while another of its group is still present is a character who left, not a player: it merged into that one
+-- (Clicker turning Jacob & Esau into one character moves Esau's owned items to it, in-game 2026-11-21). It is forgotten, and observe returns it so the tracker moves its items.
+-- shortcut: a co-op leave in the same update as another player's Flip or Esau Jr. swap drops the player count, so that swap reads as a merge and the swapped-out form's items go; compare per group if that gets reported.
+-- Clicker out of Tainted Lazarus keeps only the clicking form's items (wiki), so a swapped-out form whose group now plays another character is forgotten too, and its items go.
+-- shortcut: after a continue a swapped-out form's type is unknown until it plays again, so it stays swapped; save the type if that gets reported.
 local swapped, keyAt, lastPlayers = {}, {}, 0 -- swapped-out keys; key by GetPlayer index and player count at the last observe
 local left = {} -- keys of players who left the run; their items stay, hidden unless the menu shows them
+local TAINTED_LAZARUS = { [PlayerType.PLAYER_LAZARUS_B] = true, [PlayerType.PLAYER_LAZARUS2_B] = true }
 
 -- Innate items: vanilla Lua counts them, like wisp, Zodiac and 3 Dollar Bill grants, only in GetCollectibleNum(id, false), and cannot ask the engine which is which.
 -- So the copies a character holds the first SETTLE_UPDATES updates it appears as a player type (run start, Clicker, Lazarus rising) that are neither owned,
@@ -63,7 +69,20 @@ local function settle(p)
 	innateOf[key][playerType], settleRemaining[key] = {}, SETTLE_UPDATES
 end
 
--- Sets `p.key` on each of `players` ({ index, player, ghost }), numbers newcomers and marks swaps; returns the players by key.
+local function forget(key)
+	numberOf[key], groupOf[key], swapped[key], left[key] = nil, nil, nil, nil
+	innateOf[key], typeOf[key], settleRemaining[key] = nil, nil, nil
+end
+
+-- Key of the first of `players` in the group; with `notLazarus`, the first that is neither a ghost nor a Tainted Lazarus form.
+local function presentIn(players, group, notLazarus)
+	for _, p in ipairs(players) do
+		if groupOf[p.key] == group and not (notLazarus and (p.ghost or TAINTED_LAZARUS[typeOf[p.key]])) then return p.key end
+	end
+end
+
+-- Sets `p.key` on each of `players` ({ index, player, ghost }), numbers newcomers and marks swaps; returns the players by key,
+-- and the keys of characters merged this update, each with the key it merged into.
 -- Must run every update: a swap is told from a leave by comparing with the previous update.
 function Roster.observe(players)
 	local byKey = {}
@@ -88,12 +107,18 @@ function Roster.observe(players)
 		now[p.index] = p.key
 		if not p.ghost then settle(p) end -- a ghost learns once it is back
 	end
-	local before = keyAt
+	local before, merged = keyAt, {}
 	keyAt, lastPlayers = now, #players
 	for _, old in pairs(before) do
-		if not byKey[old] and not swapped[old] then Roster.markLeft(old) end -- also catches a leaver without items
+		if byKey[old] or swapped[old] then goto nextOld end
+		merged[old] = presentIn(players, groupOf[old])
+		if merged[old] then forget(old) else Roster.markLeft(old) end -- also catches a leaver without items
+		::nextOld::
 	end
-	return byKey
+	for key in pairs(swapped) do
+		if TAINTED_LAZARUS[typeOf[key]] and presentIn(players, groupOf[key], true) then forget(key) end
+	end
+	return byKey, merged
 end
 
 function Roster.number(key)

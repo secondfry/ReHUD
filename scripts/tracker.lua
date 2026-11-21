@@ -12,6 +12,7 @@ local maxCollectibleID = itemConfig:GetCollectibles().Size - 1 -- includes modde
 local SCAN_INTERVAL = 30
 local lastCount, sinceScan = nil, 0 -- scan trigger value at the last scan and updates since; nil forces a scan
 local ordered -- display order of the entries, rebuilt by Tracker.ordered() after any change; nil means stale
+local hashOf, inherited = {}, {} -- GetPtrHash by key at the last update; hashes of merged characters by the key they merged into, while it settles
 
 local function add(id, owner, number, floor, temporary)
 	local item = itemConfig:GetCollectible(id)
@@ -57,13 +58,19 @@ end
 -- While a character settles, its item wisps by id (`p.wisps`) and its Zodiac item (`p.zodiac`), so innate learning leaves them out.
 -- Owners are matched by GetPtrHash only: a wisp's Player may be a removed entity, and methods on one crash natively.
 local function attribute(players, wisps)
-	local byHash = {}
+	local byHash, wispsOf = {}, {}
+	hashOf = {}
 	for _, p in ipairs(players) do
 		p.wisps, p.zodiac = nil, nil
+		hashOf[p.key] = GetPtrHash(p.player)
 		if not p.ghost and roster.isSettling(p.key) then
 			p.wisps, p.zodiac = {}, p.player:GetZodiacEffect()
-			byHash[GetPtrHash(p.player)] = p.wisps
+			byHash[hashOf[p.key]], wispsOf[p.key] = p.wisps, p.wisps
 		end
+	end
+	-- A merged character's wisp may still count for the character it merged into for some updates (unmeasured): kept out of innate learning like its own.
+	for hash, key in pairs(inherited) do
+		if wispsOf[key] then byHash[hash] = wispsOf[key] else inherited[hash] = nil end
 	end
 	if not next(byHash) then return end
 	for _, e in ipairs(wisps) do
@@ -107,6 +114,7 @@ end
 function Tracker.reset()
 	Tracker.entries, Tracker.characterCount, Tracker.leftCount = {}, 0, 0
 	lastCount, sinceScan, ordered = nil, 0, nil
+	hashOf, inherited = {}, {}
 	roster.reset()
 end
 
@@ -149,10 +157,15 @@ function Tracker.serialize()
 end
 
 -- `players`: players as { index, player, ghost }, by index. A ghost's and a swapped-out character's entries stay as they are; any other player not listed left the run, and that player's entries stay too, marked left.
+-- A character who left while its group plays on (see roster.lua) hands its entries without a clock, floors and order kept, to the one it merged into, and its clocked ones go.
 -- Drops copies a player lost and refreshes each copy's kind every update; scans for new ones only when due.
 function Tracker.update(players)
 	if #players == 0 then return end -- transient state: read as everyone leaving, it would wipe the list
-	local byKey, free, firstKey, known, gone = roster.observe(players), {}, nil, {}, {}
+	local byKey, merged = roster.observe(players)
+	local free, firstKey, known, gone = {}, nil, {}, {}
+	for old, into in pairs(merged) do
+		if hashOf[old] then inherited[hashOf[old]] = into end
+	end
 	local wisps = Isaac.FindByType(EntityType.ENTITY_FAMILIAR, FamiliarVariant.ITEM_WISP)
 	attribute(players, wisps)
 	for _, p in ipairs(players) do
@@ -165,6 +178,13 @@ function Tracker.update(players)
 		byId[id] = byId[id] or copies(p, id)
 		return byId[id]
 	end
+	-- Clicker into Jacob & Esau splits the owned items between the two in one use (in-game 2026-11-21): a settling character of the same group
+	-- with an unmatched copy without a clock takes the entry, so it keeps its floor. Assumes the copies land on the newcomer while it settles.
+	local function heir(p, id)
+		for _, q in ipairs(players) do
+			if q ~= p and not q.ghost and roster.group(q.key) == roster.group(p.key) and roster.isSettling(q.key) and slots(q, id)[1] > 0 then return q end
+		end
+	end
 
 	-- Newest first, so when a kind has fewer copies than entries the oldest entries of that kind go.
 	-- shortcut: vanilla cannot tell which copy was lost, so the oldest icon of that kind leaves; track copies by source if that reads wrong.
@@ -173,6 +193,13 @@ function Tracker.update(players)
 		local entry = entries[i]
 		if not entry.owner and firstKey then entry.owner, entry.number, ordered = firstKey, roster.number(firstKey), nil end
 		if not entry.owner then goto continue end -- old save: waits for a living player 0
+		local into = merged[entry.owner]
+		if into and not entry.temporary then entry.owner, entry.number, entry.merged, ordered = into, roster.number(into), true, nil end
+		if not roster.number(entry.owner) then -- a merged character's clocked copies, or a Tainted Lazarus form that can never return
+			table.remove(entries, i)
+			ordered = nil
+			goto continue
+		end
 		local p = byKey[entry.owner]
 		if not p and roster.isSwapped(entry.owner) then
 			known[entry.number] = true
@@ -185,9 +212,19 @@ function Tracker.update(players)
 		end
 		entry.left = nil -- back in the run
 		if p.ghost then goto continue end -- frozen
+		if entry.merged and not roster.isSettling(p.key) then entry.merged = nil end
 		local slot = slots(p, entry.id)
 		local kind = entry.temporary and 2 or 1
 		if entry.temporary == nil and slot[1] == 0 then kind = 2 end -- unknown kind (older save): fills copies without a clock first
+		local q = slot[kind] == 0 and kind == 1 and heir(p, entry.id)
+		if q then
+			local s = slots(q, entry.id)
+			s[1], entry.owner, entry.number, entry.temporary, ordered = s[1] - 1, q.key, roster.number(q.key), false, nil
+			goto continue
+		end
+		-- The merged copies may reach the survivor some updates after the merge (unmeasured): kept while it settles, so they keep their floors.
+		-- shortcut: a copy the merge lost (Clicker's removal) shows for up to SETTLE_UPDATES before the oldest leaves, and copies that reach the survivor before the other character vanishes list under the current floor; measure the engine's order if that gets reported.
+		if slot[kind] == 0 and entry.merged then goto continue end
 		if slot[kind] == 0 then
 			table.remove(entries, i)
 			ordered = nil
