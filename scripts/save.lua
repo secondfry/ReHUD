@@ -1,4 +1,4 @@
--- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { character keys }, roster = { { key, number, swapped, left } } }; earlier versions wrote neither owner nor roster.
+-- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { character keys }, roster = { { key, number, group, swapped, left, innate = { ids } } } }; earlier versions wrote neither owner nor roster, and before 2.6 no innate.
 local json = require("json")
 
 local Save = {}

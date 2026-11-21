@@ -14,6 +14,24 @@ local groupOf, groupFor, nextGroup = {}, {}, 0
 local swapped, keyAt, lastPlayers = {}, {}, 0 -- swapped-out keys; key by GetPlayer index and player count at the last observe
 local left = {} -- keys of players who left the run; their items stay, hidden unless the menu shows them
 
+-- Innate items: vanilla Lua counts them, like wisp, Zodiac and 3 Dollar Bill grants, only in GetCollectibleNum(id, false), and cannot ask the engine which is which.
+-- So whatever modifier-only item a character holds while settling (first SETTLE_UPDATES updates after it is first seen or changes type, e.g. by Clicker) counts as innate.
+-- The set is saved, so wisps held at a continue stay temporary; saves from before it re-learn on the first update.
+-- shortcut: temporary items gained during a settle second (Eden starting with Zodiac or 3 Dollar Bill, a wisp right after Clicker) are taken as innate and lose the clock; track their sources if that gets reported.
+local SETTLE_UPDATES = 30 -- innate grants may land a few updates after the character appears
+local innateOf, typesOf, settleLeft = {}, {}, {} -- innate item set, player types seen (since load) and remaining settle updates by key
+
+-- A saved id list as a set; nil when malformed, so it is re-learned.
+local function idSet(list)
+	if type(list) ~= "table" or (next(list) ~= nil and #list == 0) then return end
+	local set = {}
+	for _, id in ipairs(list) do
+		id = type(id) == "number" and math.tointeger(id)
+		if id then set[id] = true end
+	end
+	return set
+end
+
 -- The GetPlayer index shifts when a co-op player leaves; the Sad Onion RNG seed stays the player's for the whole run, saves included (IsaacScript getPlayerIndex).
 -- shortcut: a mod calling Next() on that RNG changes the key and that character's items re-list under the current floor; switch to a sturdier key if that gets reported.
 local function playerKey(player)
@@ -25,17 +43,18 @@ function Roster.reset()
 	swapped, keyAt, lastPlayers = {}, {}, 0
 	left = {}
 	groupOf, groupFor, nextGroup = {}, {}, 0
+	innateOf, typesOf, settleLeft = {}, {}, {}
 end
 
 -- Registers a known character (from a save); a key already known keeps its number, and an out-of-range or taken number is refused.
 -- A missing or out-of-range group (rows from before groups) gives the character a group of its own, after every real one and ordered by its number.
-function Roster.claim(key, number, isSwapped, isLeft, group)
+function Roster.claim(key, number, isSwapped, isLeft, group, innate)
 	if numberOf[key] or number > MAX_NUMBER then return end
 	for _, taken in pairs(numberOf) do
 		if taken == number then return end
 	end
 	numberOf[key], nextNumber = number, math.max(nextNumber, number + 1)
-	swapped[key], left[key] = isSwapped or nil, isLeft or nil
+	swapped[key], left[key], innateOf[key] = isSwapped or nil, isLeft or nil, idSet(innate)
 	if group and group <= MAX_NUMBER then
 		nextGroup = math.max(nextGroup, group + 1)
 	else
@@ -67,6 +86,14 @@ function Roster.observe(players)
 		end
 		groupFor[controller] = groupFor[controller] or groupOf[p.key]
 		now[p.index] = p.key
+		if not p.ghost then -- a ghost learns once it is back
+			local playerType, seen = p.player:GetPlayerType(), typesOf[p.key]
+			settleLeft[p.key] = settleLeft[p.key] and settleLeft[p.key] > 1 and settleLeft[p.key] - 1 or nil
+			-- only a type this key has not had: switching back and forth (The Forgotten and his Soul) does not settle again
+			if not innateOf[p.key] or (seen and not seen[playerType]) then settleLeft[p.key] = SETTLE_UPDATES end
+			innateOf[p.key], typesOf[p.key] = innateOf[p.key] or {}, seen or {}
+			typesOf[p.key][playerType] = true
+		end
 	end
 	local before = keyAt
 	keyAt, lastPlayers = now, #players
@@ -105,11 +132,22 @@ function Roster.isLeft(key)
 	return left[key] == true
 end
 
+-- The character's innate item set (ids as keys), filled by the tracker while the character settles.
+function Roster.innate(key)
+	return innateOf[key]
+end
+
+function Roster.isSettling(key)
+	return settleLeft[key] ~= nil
+end
+
 -- Every known character, item-less ones included, so numbers survive a continue.
 function Roster.serialize()
 	local rows = {}
 	for key, number in pairs(numberOf) do
-		table.insert(rows, { key = key, number = number, group = groupOf[key], swapped = swapped[key] == true, left = left[key] == true })
+		local innate = innateOf[key] and {} -- nil for a restored character not seen since: re-learned like an old save
+		for id in pairs(innateOf[key] or {}) do table.insert(innate, id) end
+		table.insert(rows, { key = key, number = number, group = groupOf[key], swapped = swapped[key] == true, left = left[key] == true, innate = innate })
 	end
 	return rows
 end
