@@ -18,7 +18,7 @@ local left = {} -- keys of players who left the run; their items stay, hidden un
 -- So whatever modifier-only item a character holds while settling, the first SETTLE_UPDATES updates it appears as a player type (run start, Clicker, Lazarus rising), counts as innate.
 -- Sets are kept per player type, so an earlier type's innate items do not exempt later grants of them. They are saved, so wisps held at a continue stay temporary;
 -- saves without innate sets re-learn on the first update.
--- shortcut: temporary items gained inside a settle second (Eden starting with Zodiac or 3 Dollar Bill, grants within a second around a type change) and on the first load of an older save are taken as innate and lose the clock; track grant sources if that gets reported.
+-- shortcut: known limits (accepted): temporary items gained inside a settle second (Eden starting with Zodiac or 3 Dollar Bill, grants within a second around Clicker, Lazarus rising or a co-op join, a wisp just before a type change) and on the first load of an older save are taken as innate and lose the clock; track grant sources if that gets reported.
 local SETTLE_UPDATES = 30 -- unmeasured margin: innate grants may land a few updates after the character appears
 local innateOf, typeOf, settleRemaining = {}, {}, {} -- innate item sets by key then player type (ids as keys); current player type and remaining settle updates by key
 
