@@ -10,6 +10,7 @@ Adds a more customizable smaller version of the "Extra HUD", which displays the 
 - **Shows as many items as fit on screen**, newest first, grouped by floor.
 - **Repentance floor names, in every game language**: Russian, Japanese, Korean and Chinese floor names no longer show up blank.
 - **New filters**: active items, and temporary items (Lemegeton wisps, Zodiac, 3 Dollar Bill), which are marked with a small clock.
+- **One icon per copy**: an item held twice (picked up twice, owned plus a character's innate copy like Cain's Lucky Foot, owned plus a Lemegeton wisp) shows twice. Each wisp, Zodiac or 3 Dollar Bill copy gets its own clock and leaves when it does.
 - **Timer** shows hundredths of a second.
 - **Co-op and Jacob and Esau**: lists every character's items, grouped by player within each floor and each marked with a character number when there is more than one (Esau, each Tainted Lazarus form and an Esau Jr. form get their own). A dead player's items stay listed; items of players who leave stay hidden unless **Show items of players who left** is on.
 

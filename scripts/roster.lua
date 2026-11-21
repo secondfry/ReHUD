@@ -1,5 +1,5 @@
 -- Who the playable characters are: a key per character, the 0-based number it got when first seen (kept for the run), the player group it belongs to,
--- whether it is swapped out or left the run, and its innate item sets per player type.
+-- whether it is swapped out or left the run, and its innate item counts per player type.
 local Roster = {}
 
 local numberOf, nextNumber = {}, 0 -- character number by key, and the next free one
@@ -15,12 +15,12 @@ local swapped, keyAt, lastPlayers = {}, {}, 0 -- swapped-out keys; key by GetPla
 local left = {} -- keys of players who left the run; their items stay, hidden unless the menu shows them
 
 -- Innate items: vanilla Lua counts them, like wisp, Zodiac and 3 Dollar Bill grants, only in GetCollectibleNum(id, false), and cannot ask the engine which is which.
--- So whatever modifier-only item a character holds while settling, the first SETTLE_UPDATES updates it appears as a player type (run start, Clicker, Lazarus rising), counts as innate.
--- Sets are kept per player type, so an earlier type's innate items do not exempt later grants of them. They are saved, so wisps held at a continue stay temporary;
--- saves without innate sets re-learn on the first update.
--- shortcut: known limits (accepted): temporary items gained inside a settle second (Eden starting with Zodiac or 3 Dollar Bill, grants within a second around Clicker, Lazarus rising or a co-op join, a wisp just before a type change) and on the first load of an older save are taken as innate and lose the clock; and a wisp of an item held through Clicker into a character with that item innate keeps the clock while the item is held. Track grant sources (the multiple-copies rework).
+-- So the copies a character holds the first SETTLE_UPDATES updates it appears as a player type (run start, Clicker, Lazarus rising) that are neither owned,
+-- nor its item wisps, nor its Zodiac item count as innate (the tracker attributes those). Counts are kept per player type, so an earlier type's innate items
+-- do not exempt later grants of them. They are saved, so grants held at a continue keep the clock; saves without innate counts re-learn on the first update.
+-- shortcut: known limits (accepted): a 3 Dollar Bill grant inside a settle second (Eden's start, around Clicker, Lazarus rising, a co-op join, an older save's first load) is learned as innate for that type, so that item shows no clock while 3 Dollar Bill grants it to that type; and item wisps whose familiar does not point at the settling character (mod wisps without a Player; an old form's wisps after a first Flip or Esau Jr. swap, unchecked) count as innate. Read the engine's innate list (REPENTOGON's HasInnateCollectible) if that gets reported.
 local SETTLE_UPDATES = 30 -- unmeasured margin: innate grants may land a few updates after the character appears
-local innateOf, typeOf, settleRemaining = {}, {}, {} -- innate item sets by key then player type (ids as keys); current player type and remaining settle updates by key
+local innateOf, typeOf, settleRemaining = {}, {}, {} -- innate copy counts by key, player type, then id; current player type and remaining settle updates by key
 
 -- The GetPlayer index shifts when a co-op player leaves; the Sad Onion RNG seed stays the player's for the whole run, saves included (IsaacScript getPlayerIndex).
 -- shortcut: a mod calling Next() on that RNG changes the key and that character's items re-list under the current floor; switch to a sturdier key if that gets reported.
@@ -38,7 +38,7 @@ end
 
 -- Registers a known character (from a save); a key already known keeps its number, and an out-of-range or taken number is refused.
 -- A missing or out-of-range group (rows from before groups) gives the character a group of its own, after every real one and ordered by its number.
--- `innate`: parsed innate sets by player type, nil to re-learn.
+-- `innate`: parsed innate counts by player type, nil to re-learn.
 function Roster.claim(key, number, isSwapped, isLeft, group, innate)
 	if numberOf[key] or number > MAX_NUMBER then return end
 	for _, taken in pairs(numberOf) do
@@ -54,7 +54,7 @@ function Roster.claim(key, number, isSwapped, isLeft, group, innate)
 	groupOf[key] = group
 end
 
--- Counts down the settle window and starts one when the character appears as a player type it has no innate set for.
+-- Counts down the settle window and starts one when the character appears as a player type it has no innate counts for.
 local function settle(p)
 	local key, playerType = p.key, p.player:GetPlayerType()
 	settleRemaining[key] = settleRemaining[key] and settleRemaining[key] > 1 and settleRemaining[key] - 1 or nil
@@ -125,25 +125,27 @@ function Roster.isLeft(key)
 	return left[key] == true
 end
 
--- Whether a modifier-only item is innate for the character's current type; while it settles, one not already temporary is learned as innate.
-function Roster.isInnate(key, id, wasTemporary)
-	local set = innateOf[key][typeOf[key]]
-	if settleRemaining[key] and not wasTemporary then set[id] = true end
-	return set[id] == true
+-- Innate copies of the item for the character's current type; while it settles, `unexplained` (copies the tracker could not attribute) raises the count.
+function Roster.innate(key, id, unexplained)
+	local counts = innateOf[key][typeOf[key]]
+	if settleRemaining[key] and unexplained and unexplained > (counts[id] or 0) then counts[id] = unexplained end
+	return counts[id] or 0
 end
 
 function Roster.isSettling(key)
 	return settleRemaining[key] ~= nil
 end
 
--- Saved form of a character's innate sets, { { type, ids } }; nil when none were learned. A type still settling is left out, so it settles again after a continue.
+-- Saved form of a character's innate counts, { { type, ids } } with an id once per copy; nil when none were learned. A type still settling is left out, so it settles again after a continue.
 local function innateRows(key)
 	if not innateOf[key] then return end
 	local rows = {}
-	for playerType, set in pairs(innateOf[key]) do
+	for playerType, counts in pairs(innateOf[key]) do
 		if playerType == typeOf[key] and settleRemaining[key] then goto nextType end
 		local ids = {}
-		for id in pairs(set) do table.insert(ids, id) end
+		for id, n in pairs(counts) do
+			for _ = 1, n do table.insert(ids, id) end
+		end
 		table.insert(rows, { type = playerType, ids = ids })
 		::nextType::
 	end
