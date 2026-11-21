@@ -10,6 +10,9 @@ local mcm = include("scripts.mcm")
 
 local gameStarted = false
 
+-- Read-only access for the in-game test harness (isaac-test-harness); nothing in ReHUD reads it.
+ReHUD.dbg = { tracker = tracker, config = config, roster = tracker.roster }
+
 function ReHUD:isActive()
 	return not config.disable
 end

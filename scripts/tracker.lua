@@ -6,6 +6,7 @@
 local Tracker = { entries = {}, characterCount = 0, leftCount = 0 }
 
 local roster = include("scripts.roster")
+Tracker.roster = roster -- for ReHUD.dbg only: main.lua cannot include its own copy (include reloads the file)
 local itemConfig = Isaac.GetItemConfig()
 local maxCollectibleID = itemConfig:GetCollectibles().Size - 1 -- includes modded items
 
