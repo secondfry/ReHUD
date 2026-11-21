@@ -183,12 +183,13 @@ function Roster.isSettling(key)
 	return settleRemaining[key] ~= nil
 end
 
--- Saved form of a character's innate counts, { { type, ids } } with an id once per copy; nil when none were learned. A type still settling is left out, so it settles again after a continue.
+-- Saved form of a character's innate counts, { { type, ids } } with an id once per copy; nil when none were learned. A type still settling is left out, so it settles again after a continue;
+-- a stored Tainted Lazarus form's is kept even then, as the saved row is how that form is recognised after a continue (its type is not saved).
 local function innateRows(key)
 	if not innateOf[key] then return end
 	local rows = {}
 	for playerType, counts in pairs(innateOf[key]) do
-		if playerType == typeOf[key] and settleRemaining[key] then goto nextType end
+		if playerType == typeOf[key] and settleRemaining[key] and not (swapped[key] and TAINTED_LAZARUS[playerType]) then goto nextType end
 		local ids = {}
 		for id, n in pairs(counts) do
 			for _ = 1, n do table.insert(ids, id) end
