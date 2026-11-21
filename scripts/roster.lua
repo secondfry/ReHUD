@@ -15,7 +15,7 @@ local groupOf, groupFor, nextGroup = {}, {}, 0
 -- (Clicker turning Jacob & Esau into one character moves Esau's owned items to it, in-game 2026-11-21). It is forgotten, and observe returns it so the tracker moves its items.
 -- A swapped-out Tainted Lazarus form whose group now plays a former Tainted Lazarus form as another character merges into it like Esau: Clicker and ChangePlayerType out of Tainted Lazarus gave the new character both forms' items (in-game 2026-11-21). Should the engine drop them (the wiki's claim for Clicker), the moved copies leave once the survivor settles.
 -- shortcut: Esau Jr. used by Tainted Lazarus, then Clicker on the Esau Jr. form, merges the stored original form too, so its items go and it returns renumbered; tell the Flip partner from an Esau Jr. original if that gets reported.
--- shortcut: after a continue a swapped-out form's type is unknown until it plays again, so it stays swapped; save the type if that gets reported.
+-- shortcut: after a continue a swapped-out form's type is unknown until it plays again, so it stays swapped (a Tainted Lazarus form is told by its saved innate rows); save the type if that gets reported.
 local swapped, keyAt, lastPlayers = {}, {}, 0 -- swapped-out keys; key by GetPlayer index and player count at the last observe
 local left = {} -- keys of players who left the run; their items stay, hidden unless the menu shows them
 local TAINTED_LAZARUS = { [PlayerType.PLAYER_LAZARUS_B] = true, [PlayerType.PLAYER_LAZARUS2_B] = true }
@@ -74,9 +74,20 @@ local function forget(key)
 	innateOf[key], typeOf[key], settleRemaining[key] = nil, nil, nil
 end
 
+-- Settled as a Tainted Lazarus form at some point: its innate counts (saved too) have a row for one.
+local function settledAsLazarus(key)
+	return innateOf[key] ~= nil and (innateOf[key][PlayerType.PLAYER_LAZARUS_B] or innateOf[key][PlayerType.PLAYER_LAZARUS2_B]) ~= nil
+end
+
 -- A Tainted Lazarus form turned into another character (Clicker, ChangePlayerType): it settled as one and is none now.
 local function wasLazarus(key)
-	return not TAINTED_LAZARUS[typeOf[key]] and (innateOf[key][PlayerType.PLAYER_LAZARUS_B] or innateOf[key][PlayerType.PLAYER_LAZARUS2_B]) ~= nil
+	return not TAINTED_LAZARUS[typeOf[key]] and settledAsLazarus(key)
+end
+
+-- A Tainted Lazarus form; after a continue a swapped-out form's type is unknown, so the types it settled as tell.
+local function isLazarus(key)
+	if typeOf[key] then return TAINTED_LAZARUS[typeOf[key]] end
+	return settledAsLazarus(key)
 end
 
 -- Key of the first living one of `players` in the group that passes `test`, if given.
@@ -126,7 +137,7 @@ function Roster.observe(players)
 		::nextOld::
 	end
 	for key in pairs(swapped) do
-		local into = TAINTED_LAZARUS[typeOf[key]] and presentIn(players, groupOf[key], wasLazarus)
+		local into = isLazarus(key) and presentIn(players, groupOf[key], wasLazarus)
 		if into then merged[key] = into; forget(key) end
 	end
 	return byKey, merged
