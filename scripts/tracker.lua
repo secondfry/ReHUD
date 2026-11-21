@@ -27,6 +27,24 @@ local function savedInteger(value)
 	if n and n >= 0 then return n end
 end
 
+-- Saved innate sets ({ { type, ids } }) by player type; nil when anything is malformed, so the character re-learns.
+local function savedInnate(rows)
+	if type(rows) ~= "table" then return end
+	local sets = {}
+	for _, row in pairs(rows) do
+		local playerType = type(row) == "table" and savedInteger(row.type)
+		if not playerType or type(row.ids) ~= "table" then return end
+		local set = {}
+		for _, id in pairs(row.ids) do
+			id = savedInteger(id)
+			if not id then return end
+			set[id] = true
+		end
+		sets[playerType] = set
+	end
+	return sets
+end
+
 local function currentFloorName()
 	if StageAPI and StageAPI.Loaded and StageAPI.InOverriddenStage() then
 		local name = StageAPI.GetCurrentStageDisplayName()
@@ -35,15 +53,11 @@ local function currentFloorName()
 	return Game():GetLevel():GetName()
 end
 
--- Whether the player `p` has the item at all, and whether only through temporary modifiers. Modifier-only items that are there while
--- the character settles (see roster.lua) are its innate items (Cain's Lucky Foot, The Lost's Holy Mantle, modded characters'), not temporary;
--- one already tracked as temporary (`wasTemporary`) stays so.
+-- Whether the player `p` has the item at all, and whether only through temporary modifiers (innate items: see roster.lua).
 local function holding(p, id, wasTemporary)
 	if p.player:GetCollectibleNum(id, true) > 0 then return true, false end
 	if p.player:GetCollectibleNum(id, false) == 0 then return false end
-	local innate = roster.innate(p.key)
-	if roster.isSettling(p.key) and not wasTemporary then innate[id] = true end
-	return true, not innate[id]
+	return true, not roster.isInnate(p.key, id, wasTemporary)
 end
 
 local function size(set)
@@ -57,7 +71,7 @@ local function scanDue(players)
 	local count, settling = 0, false
 	for _, p in ipairs(players) do
 		count = count + p.player:GetCollectibleCount()
-		settling = settling or roster.isSettling(p.key)
+		settling = settling or (not p.ghost and roster.isSettling(p.key))
 	end
 	sinceScan = sinceScan + 1
 	if count == lastCount and sinceScan < SCAN_INTERVAL and not settling then return false end
@@ -71,7 +85,7 @@ function Tracker.reset()
 	roster.reset()
 end
 
--- Rebuild from the saved parallel arrays and roster rows ({ key, number, group, swapped, left, innate }); entries whose item no longer exists are dropped.
+-- Rebuild from the saved parallel arrays and roster rows ({ key, number, group, swapped, left, innate = { { type, ids } } }); entries whose item no longer exists are dropped.
 -- An owner that is missing (saves from before co-op tracking), malformed or without a valid roster row is left unset
 -- and goes to whoever is living player 0 on a later update; until then the items show as character 1.
 function Tracker.restore(ids, floors, owners, rows)
@@ -80,7 +94,7 @@ function Tracker.restore(ids, floors, owners, rows)
 		for _, row in ipairs(rows) do
 			if type(row) ~= "table" then goto nextRow end
 			local key, number = savedInteger(row.key), savedInteger(row.number)
-			if key and number then roster.claim(key, number, row.swapped == true, row.left == true, savedInteger(row.group), row.innate) end
+			if key and number then roster.claim(key, number, row.swapped == true, row.left == true, savedInteger(row.group), savedInnate(row.innate)) end
 			::nextRow::
 		end
 	end
