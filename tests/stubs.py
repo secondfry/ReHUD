@@ -31,6 +31,7 @@ function mkplayer(real, mod, variant, ghost, seed)
     GetCollectibleNum = function(self, id, onlyTrue) return (real[id] or 0) + (onlyTrue and 0 or (mod[id] or 0)) end,
     GetCollectibleCount = function(self) local n = 0; for _, c in pairs(real) do n = n + c end; return n end,
     GetZodiacEffect = function(self) return self.zodiac or 0 end,
+    GetData = function(self) local id = self.ent or self.seed; dataOf[id] = dataOf[id] or {}; return dataOf[id] end, -- one table per entity: ent, else the seed
     IsCoopGhost = function() return ghost end }
 end
 ''')
@@ -38,9 +39,11 @@ src = (repo/'scripts'/'tracker.lua').read_text(encoding='utf-8')
 # include re-runs the file, so every fresh tracker gets a fresh roster
 g = lua.globals(); g.REPO = str(repo)
 lua.execute('include = function(name) return dofile(REPO .. "/" .. name:gsub("%.", "/") .. ".lua") end')
-fresh = lambda: lua.execute(src)
-def P(real={}, mod={}, variant=0, ghost=False, seed=None, ptype=0):
-    p = g.mkplayer(lua.table_from(real), lua.table_from(mod), variant, ghost, seed); p.ptype = ptype
+def fresh():  # a new run or a Continue: GetData starts empty (in-game 2026-11-22)
+    lua.execute('dataOf = {}'); return lua.execute(src)
+# ent: the entity, for GetData; set it apart for characters sharing a seed (Esau Jr. forms, a Birthright twin of one)
+def P(real={}, mod={}, variant=0, ghost=False, seed=None, ptype=0, ent=None):
+    p = g.mkplayer(lua.table_from(real), lua.table_from(mod), variant, ghost, seed); p.ptype, p.ent = ptype, ent
     return p
 def L(*ps):
     for i, p in ps:

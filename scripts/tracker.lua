@@ -118,7 +118,7 @@ function Tracker.reset()
 	roster.reset()
 end
 
--- Rebuild from the saved parallel arrays and roster rows ({ key, number, group, swapped, left, innate = { { type, ids } }, type, partner, esauJr }); entries whose item no longer exists are dropped.
+-- Rebuild from the saved parallel arrays and roster rows ({ key, number, group, swapped, left, innate = { { type, ids } }, type, partner, esauJr, summoned }); entries whose item no longer exists are dropped.
 -- An owner that is missing (saves from before co-op tracking), malformed or without a valid roster row is left unset
 -- and goes to whoever is living player 0 on a later update; until then the items show as character 1.
 -- A missing `temporary` (saves before 2.8) leaves the kind unknown: the first update fills copies without a clock first.
@@ -128,7 +128,7 @@ function Tracker.restore(ids, floors, owners, rows, temporaries)
 		for _, row in ipairs(rows) do
 			if type(row) ~= "table" then goto nextRow end
 			local key, number = savedInteger(row.key), savedInteger(row.number)
-			if key and number then roster.claim(key, number, row.swapped == true, row.left == true, savedInteger(row.group), savedInnate(row.innate), savedInteger(row.type), savedInteger(row.partner), savedInteger(row.esauJr)) end
+			if key and number then roster.claim(key, number, row.swapped == true, row.left == true, savedInteger(row.group), savedInnate(row.innate), savedInteger(row.type), savedInteger(row.partner), savedInteger(row.esauJr), row.summoned == true) end
 			::nextRow::
 		end
 	end
@@ -199,7 +199,7 @@ function Tracker.update(players)
 		local into = merged[entry.owner]
 		if into and not entry.temporary then entry.owner, entry.number, ordered = into, roster.number(into), nil end
 		if survivors[entry.owner] and not entry.temporary then entry.merged = true end
-		if not roster.number(entry.owner) then -- a merged character's clocked copies, or a stored character that can never return (a Tainted Lazarus form, an Esau Jr. original)
+		if not roster.number(entry.owner) then -- a merged character's clocked copies, a stored Tainted Lazarus form merged away, or a summoned Esau who left
 			table.remove(entries, i)
 			ordered = nil
 			goto continue

@@ -253,7 +253,7 @@ p0, ghost, baby, esau, strawman, soul = P({1:1}), P({2:1}, ghost=True), P({3:1},
 strawman.Parent = p0
 g.playersByIndex = lua.table_from({0: p0, 1: ghost, 2: baby, 3: esau, 4: strawman, 5: soul}); g.numPlayers = 6
 g.callbacks[CB.MC_POST_GAME_STARTED](None, False); g.callbacks[CB.MC_POST_UPDATE]()
-assert seen == [[(0, g.tostring(p0), False), (1, g.tostring(ghost), True), (3, g.tostring(esau), False)]], seen; ok('main: ghost passed marked, co-op baby and Strawman (Parent set) and Tainted Soul excluded, Esau kept with his index')
+assert seen == [[(0, g.tostring(p0), False), (1, g.tostring(ghost), True), (3, g.tostring(esau), False), (4, g.tostring(strawman), False)]], seen; ok('main: ghost passed marked, co-op baby and Tainted Soul excluded, Esau and Strawman\'s Keeper (Parent set) kept with their indexes')
 seen.clear(); g.playersByIndex = lua.table_from({0: P({1:1}, ptype=35), 1: soul}); g.numPlayers = 2; g.callbacks[CB.MC_POST_UPDATE]()
 assert len(seen) == 1 and len(seen[0]) == 1; ok('main: solo Tainted Forgotten passes one player (characterCount 1)')
 
@@ -580,10 +580,14 @@ g.floorName = 'B1'; W()
 # Observed seed, type and inventory transitions, seen in game (2026-11-21).
 BR, RANDOM = 14, 15
 A, B, C, D = TA, TB, TC, TD
+BJ, DJ = B + 2**32, D + 2**32  # keys of a second character on B's and D's seeds
 original = (4, EJ, FL)
 esau = (5, EJ, FL, RANDOM)
 def form(seed, ptype, *ids):
     return pl({id_: 1 for id_ in ids}, {}, seed, ptype)
+
+def other(p, ent):  # another entity on the same seed
+    p.ent = ent; return p
 
 def play(T, *players, n=31):
     run(T, L(*enumerate(players)), n)
@@ -626,50 +630,49 @@ T = fresh()
 play(T, form(A, 29, *original))
 play(T, form(B, 38, 5, FL))
 play(T, form(A, 29, *original))
-play(T, form(B, 29, EJ, FL, RANDOM), n=3)
-replay(T, 'flipped cross: Esau Jr. reuses B', (A, 0, True, original), (B, 1, False, (EJ, FL, RANDOM)))
-play(T, form(B, 38, *esau), n=3)
+play(T, other(form(B, 29, EJ, FL, RANDOM), 'Bj'), n=3)
+replay(T, 'flipped cross: Esau Jr. reuses the Dead form seed: own row, the Dead form stored', (A, 0, True, original), (B, 1, True, (5, FL)), (BJ, 2, False, (EJ, FL, RANDOM)))
+play(T, other(form(B, 38, *esau), 'Bj'), n=3)
 play(T, form(A, 38, *original), n=60)
-replay(T, 'flipped cross: A returns', (A, 0, False, original), (B, 1, True, esau))
-play(T, form(B, 38, *esau), n=60)
-replay(T, 'flipped cross: Esau Jr. returns B', (A, 0, True, original), (B, 1, False, esau))
+# A returning as the Dead form's type merges the stored Dead form into it (what the engine did with that form is unobserved; A came back without its items)
+replay(T, 'flipped cross: A returns', (A, 0, False, original), (BJ, 2, True, esau))
+play(T, other(form(B, 38, *esau), 'Bj'), n=60)
+replay(T, 'flipped cross: Esau Jr. returns its form', (A, 0, True, original), (BJ, 2, False, esau))
 
 T = esau_setup()
-play(T, form(B, 29, *esau, BR), form(B, 38, FL), n=6)
+play(T, form(B, 29, *esau, BR), other(form(B, 38, FL), 'twin'), n=6)
 play(T, form(B, 29, *esau), n=60)
-replay(T, 'birthright removed: A stays stored', (A, 0, True, original), (B, 1, False, esau))
+replay(T, 'birthright removed: A stays stored, the twin stored too', (A, 0, True, original), (B, 1, False, esau), (BJ, 2, True, (FL,)))
 
 T = fresh()
 play(T, form(C, 29, *original))
 play(T, form(C, 29, *original, BR), form(D, 38, FL))
-play(T, form(D, 29, EJ, FL, RANDOM))
-replay(T, 'birthright: Esau Jr. stores C', (C, 0, True, (*original, BR)), (D, 1, False, (EJ, FL, RANDOM)))
-play(T, form(D, 29, *esau), n=3)
+play(T, other(form(D, 29, EJ, FL, RANDOM), 'Dj'))
+replay(T, 'birthright: Esau Jr. stores C and its twin D, its form on that seed gets its own row', (C, 0, True, (*original, BR)), (D, 1, True, (FL,)), (DJ, 2, False, (EJ, FL, RANDOM)))
+play(T, other(form(D, 29, *esau), 'Dj'), n=3)
 play(T, form(C, 29, *original, BR), form(D, 38, FL), n=60)
-# shortcut: the stored Esau Jr. form shares its seed with a live form, so its expected (FL,) is ReHUD's shared-seed listing (the engine holds its own items, in-game 2026-11-21); update once the shared-seed decision is made.
-replay(T, 'birthright: C returns with c4 and Birthright', (C, 0, False, (*original, BR)), (D, 1, False, (FL,)))
+replay(T, 'birthright: C returns with c4 and Birthright, D with its own items, the form stored with its own', (C, 0, False, (*original, BR)), (D, 1, False, (FL,)), (DJ, 2, True, esau))
 
 T = esau_setup()
-play(T, form(B, 29, *esau, BR), form(B, 38, FL), n=60)
+play(T, form(B, 29, *esau, BR), other(form(B, 38, FL), 'twin'), n=60)
 check('obs birthright keep: A#0 stays stored with two live B entities',
       (A, 0, True) in rows(T) and (4, 'B1', A) in owned(T), (rows(T), owned(T)))
 play(T, form(A, 29, *original), n=60)
-# same shared-seed listing as above
-replay(T, 'birthright keep: A returns and B is stored', (A, 0, False, original), (B, 1, True, (FL,)))
+replay(T, 'birthright keep: A returns, B and its twin stored with their own items', (A, 0, False, original), (B, 1, True, (*esau, BR)), (BJ, 2, True, (FL,)))
 
 T = esau_setup()
-play(T, form(B, 29, *esau, BR), form(B, 38, FL), n=15)
-play(T, form(B, 38, FL), form(B, 29, *esau, BR), n=60)
+play(T, form(B, 29, *esau, BR), other(form(B, 38, FL), 'twin'), n=15)
+play(T, other(form(B, 38, FL), 'twin'), form(B, 29, *esau, BR), n=60)
 check('obs birthright flip: A#0 stays stored after B exchanges indexes',
-      rows(T) == [(A, 0, True), (B, 1, False)]
+      rows(T) == [(A, 0, True), (B, 1, False), (BJ, 2, False)]
       and [id_ for id_, _, key in owned(T) if key == A] == sorted(original)
       and not any(e.merged for e in T.entries.values()), (rows(T), owned(T)))
 
 T = esau_setup()
 play(T, form(A, 29, *original))
 replay(T, 'dead seed: A returns', (A, 0, False, original), (B, 1, True, esau))
-play(T, form(B, 38, FL), n=60)
-replay(T, 'dead seed: Flip of A reuses B', (A, 0, True, original), (B, 1, False, (FL,)))
+play(T, other(form(B, 38, FL), 'Bdead'), n=60)
+replay(T, 'dead seed: Flip of A on B\'s seed gets its own row', (A, 0, True, original), (B, 1, True, esau), (BJ, 2, False, (FL,)))
 
 T = fresh()
 play(T, form(A, 29, 4, FL))
@@ -680,67 +683,112 @@ replay(T, 'mirror: Flip back stores B', (A, 0, False, (4, FL)), (B, 1, True, (5,
 play(T, form(A, 38, 4, 5, FL), n=60)
 replay(T, 'mirror: same-seed crossing merges B into A', (A, 0, False, (4, 5, FL)))
 
-# in game (2026-11-22): the engine loses the stored one for good once Esau Jr. leaves its live counterpart, even when Esau Jr. is given back
+# in game (2026-11-22): the engine never frees an Esau Jr. slot within a run, so a stored character stays listed with its items whatever happens to Esau Jr. (user decision 2026-11-22)
 T = esau_setup()
 play(T, form(B, 29, 5, RANDOM, FL, CK))
-replay(T, 'form loses Esau Jr.: forgets A without moving its items', (B, 1, False, (5, RANDOM, FL, CK)))
+replay(T, 'form loses Esau Jr.: A stays stored with its items', (A, 0, True, original), (B, 1, False, (5, RANDOM, FL, CK)))
 play(T, form(B, 29, 5, RANDOM, FL, EJ))
 play(T, form(D, 29, 7, EJ, FL))
-replay(T, 'form loses Esau Jr.: Esau Jr. given back introduces D', (B, 1, True, (5, RANDOM, FL, EJ)), (D, 2, False, (7, EJ, FL)))
+replay(T, 'form loses Esau Jr.: Esau Jr. given back introduces D', (A, 0, True, original), (B, 1, True, (5, RANDOM, FL, EJ)), (D, 2, False, (7, EJ, FL)))
 play(T, form(B, 29, 5, RANDOM, FL, EJ))
-replay(T, 'form loses Esau Jr.: Esau Jr. returns B', (B, 1, False, (5, RANDOM, FL, EJ)), (D, 2, True, (7, EJ, FL)))
+replay(T, 'form loses Esau Jr.: Esau Jr. returns B', (A, 0, True, original), (B, 1, False, (5, RANDOM, FL, EJ)), (D, 2, True, (7, EJ, FL)))
 
+D6ED = 16  # what D6 turned the used Esau Jr. into (item 236 in game)
 T = fresh()
 play(T, form(A, 0, 4, EJ))
 play(T, form(B, 0, 5, EJ))
-play(T, form(B, 8, 5, CK))
-replay(T, 'Isaac form loses Esau Jr.: forgets A', (B, 1, False, (5, CK)))
+play(T, form(B, 0, 5, D6ED))
+replay(T, 'Isaac form D6s its used Esau Jr.: Isaac stays stored with his items', (A, 0, True, (4, EJ)), (B, 1, False, (5, D6ED)))
+T = roundtrip(T); play(T, form(B, 0, 5, D6ED))
+replay(T, '... and after a continue', (A, 0, True, (4, EJ)), (B, 1, False, (5, D6ED)))
 
 T = esau_setup()
 play(T, form(A, 29, *original))
 play(T, form(A, 29, 4, FL, CK))
-replay(T, 'original loses Esau Jr.: forgets B', (A, 0, False, (4, FL, CK)))
+# whether the next press then brings B's entity or a new one on B's seed (obsx2) is unobserved, so no step for it
+replay(T, 'original loses Esau Jr.: B stays stored with its items', (A, 0, False, (4, FL, CK)), (B, 1, True, esau))
+
+# two Esau Jr. copies juggled (in-game 2026-11-22): Isaac presses copy 1 -> A, A presses copy 2 -> B, then copy 2 swaps A and B; each keeps its own items
+I0, IA, IB = 910, 911, 912
+T = fresh()
+play(T, form(I0, 0, 1, EJ))
+play(T, form(IA, 0, 2, EJ))
+play(T, form(IB, 0, 3, EJ, 6))
+play(T, form(IA, 0, 2, EJ, 7))
+play(T, form(IB, 0, 3, EJ, 6))
+replay(T, 'two copies juggled: B back, Isaac and A stored with their own items', (I0, 0, True, (1, EJ)), (IA, 1, True, (2, EJ, 7)), (IB, 2, False, (3, EJ, 6)))
+play(T, form(IA, 0, 2, EJ, 7))
+replay(T, '... and A back', (I0, 0, True, (1, EJ)), (IA, 1, False, (2, EJ, 7)), (IB, 2, True, (3, EJ, 6)))
+
+# a third, never-pressed copy pressed by Isaac makes C on A's item seed and type (in-game 2026-11-22): a second key for that seed, own items
+IC = IA + 2**32
+T = fresh()
+play(T, form(I0, 0, 1, EJ))
+play(T, form(IA, 0, 2, EJ, 7))
+play(T, form(IB, 0, 3, EJ))
+play(T, form(I0, 0, 1, EJ))
+c_form = lambda: other(form(IA, 0, 8, EJ), 'C')
+play(T, c_form())
+replay(T, 'same-seed Isaac forms: C on A\'s seed gets its own row', (I0, 0, True, (1, EJ)), (IA, 1, True, (2, EJ, 7)), (IB, 2, True, (3, EJ)), (IC, 3, False, (8, EJ)))
+play(T, form(IA, 0, 2, EJ, 7))
+replay(T, '... A plays again: its own row and items, C stored', (I0, 0, True, (1, EJ)), (IA, 1, False, (2, EJ, 7)), (IB, 2, True, (3, EJ)), (IC, 3, True, (8, EJ)))
+T = roundtrip(T); play(T, form(IA, 0, 2, EJ, 7)); play(T, c_form())
+replay(T, '... after a continue (GetData wiped) each takes its seed\'s keys in the order they play, here the right ones', (I0, 0, True, (1, EJ)), (IA, 1, True, (2, EJ, 7)), (IB, 2, True, (3, EJ)), (IC, 3, False, (8, EJ)))
+T = roundtrip(T); play(T, c_form())
+check('... C playing first after a continue takes A\'s row (shortcut: stated limit)', (IA, 1, False) in rows(T), rows(T))
+
+# Tainted Lazarus (29) pressing Esau Jr. with the Dead form (38) stored makes a type-29 form on the Dead form's seed (in-game 2026-11-22)
+LJ = B + 2**32
+T = fresh()
 play(T, form(A, 29, 4, FL, EJ))
-play(T, form(B, 29, 9, EJ, FL))
-replay(T, "original loses Esau Jr.: B's seed returns with other items as a new character", (A, 0, True, (4, FL, EJ)), (B, 2, False, (9, EJ, FL)))
+play(T, form(B, 38, 5, FL))
+play(T, form(A, 29, 4, FL, EJ))
+play(T, other(form(B, 29, 6, FL, EJ), 'LJ'))
+replay(T, 'Tainted Lazarus form on Dead Lazarus\'s seed: own row, both forms stored with their items', (A, 0, True, (4, FL, EJ)), (B, 1, True, (5, FL)), (LJ, 2, False, (6, FL, EJ)))
 
-T = esau_setup()
-play(T, form(B, 38, FL), n=3)
-play(T, form(B, 35, 5, CK))
-replay(T, 'Clicker on the flipped form, Esau Jr. replaced: forgets A', (B, 1, False, (5, CK)))
+# Strawman's Keeper (type 14, Parent set, own new seed; in-game 2026-11-22): a character with its own row
+KP = 920
+T = fresh(); isa = pl({1:1}, {}, I0, 0); keeper = pl({2:1}, {}, KP, 14); keeper.Parent = isa
+play(T, isa, keeper)
+replay(T, 'Strawman Keeper: own row and items', (I0, 0, False, (1,)), (KP, 1, False, (2,)), label='')
 
-T = esau_setup()
-play(T, form(B, 29, *esau, BR), form(B, 38, FL), n=6)
-play(T, form(B, 29, 5, RANDOM, FL, BR, CK), form(B, 38, FL))
-check('obs Birthright form loses Esau Jr.: forgets A although its flipped twin plays', rows(T) == [(B, 1, False)] and A not in [e[2] for e in owned(T)], (rows(T), owned(T)))
+# Soul of Jacob and Esau's Esau (type 20, Parent set, a new seed per summon; in-game 2026-11-22): a row while present, removed when he leaves (user decision 2026-11-22)
+SE, SE2 = 921, 922
+def summon(seed, *ids):
+    e = form(seed, 20, *ids); e.Parent = isa; return e
+T = fresh(); isa = form(I0, 0, 1)
+play(T, isa, summon(SE, 2, 3))
+replay(T, 'summoned Esau: own row and items', (I0, 0, False, (1,)), (SE, 1, False, (2, 3)), label='')
+T = roundtrip(T); play(T, form(I0, 0, 1), summon(SE, 2, 3))
+replay(T, '... kept across a continue while present', (I0, 0, False, (1,)), (SE, 1, False, (2, 3)), label='')
+play(T, form(I0, 0, 1))
+replay(T, '... he leaves: row and items gone, none moved to Isaac', (I0, 0, False, (1,)), label='')
+play(T, form(I0, 0, 1), summon(SE2, 4))
+replay(T, '... summoned again (new seed): a new row', (I0, 0, False, (1,)), (SE2, 2, False, (4,)), label='')
+T = roundtrip(T); play(T, form(I0, 0, 1))
+replay(T, '... saved but absent after a continue: forgotten', (I0, 0, False, (1,)), label='')
 
 # Not observed in game: guards for the design.
 T = esau_setup()
 play(T, form(B, 29, *esau), P({}, seed=50))
 play(T, P({}, seed=B, ptype=29, ghost=True), P({}, seed=50))
 check('ghost counterpart: A stays stored', (A, 0, True) in rows(T), rows(T))
-X = 905  # A's Dead form from an earlier Flip; only A's Flip could bring it back
+X = 905  # A's Dead form from an earlier Flip
 T = fresh()
 play(T, form(A, 29, *original))
 play(T, form(X, 38, 8, FL))
 play(T, form(A, 29, *original))
 play(T, form(B, 29, *esau))
 play(T, form(B, 29, 5, RANDOM, FL, CK))
-replay(T, "form loses Esau Jr. after the original's Flip: forgets the original's Dead form too", (B, 2, False, (5, RANDOM, FL, CK)), label='')
-play(T, form(B, 38, FL), n=1)  # one update: a merge would list X's items on B until settling drops them
-replay(T, "... then B's Flip: B does not get the Dead form's items", (B, 2, False, (FL,)), label='')
+replay(T, "form loses Esau Jr. after the original's Flip: the original and its Dead form stay stored", (A, 0, True, original), (X, 1, True, (8, FL)), (B, 2, False, (5, RANDOM, FL, CK)), label='')
+play(T, form(X, 38, 8, FL), n=1)  # the Esau Jr. form flips to the original's Dead form (in-game 2026-11-22); one update: a merge would list items on the wrong one
+replay(T, "... then B's Flip brings the Dead form back: nobody gets another's items", (A, 0, True, original), (X, 1, False, (8, FL)), (B, 2, True, (5, RANDOM, FL, CK)), label='')
 T = fresh()
 play(T, P({4:1}, seed=50), P({6:1, FL:1}, seed=C, ptype=29))
 newcomer = lambda ptype: P({7:1, FL:1}, seed=D, ptype=ptype)
 q = newcomer(29); q.ControllerIndex = 5; play(T, P({4:1}, seed=50), q)
 q = newcomer(35); q.ControllerIndex = 5; play(T, P({4:1}, seed=50), q)
 check('co-op newcomer at a vacated index without Esau Jr.: no link, the old player is kept', C in [r[0] for r in rows(T)] and (6, 'B1', C) in [(e.id, e.floor, e.owner) for e in T.entries.values()], rows(T))
-T = fresh()
-play(T, form(C, 29, *original))
-play(T, form(C, 29, *original, BR), form(D, 38, FL))
-play(T, form(D, 29, EJ, FL, RANDOM))
-play(T, form(D, 29, FL, RANDOM, CK))
-replay(T, "Birthright Esau Jr. form loses Esau Jr.: forgets C, its live partner D stays", (D, 1, False, (FL, RANDOM, CK)), label='')
 
 T = fresh()
 play(T, form(A, 29, 4))

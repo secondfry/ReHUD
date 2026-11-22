@@ -29,11 +29,10 @@ ReHUD:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
 	gameStarted = false
 end)
 
--- Playable characters only: co-op babies (variant 1; vanilla has no PlayerVariant enum), helpers with a Parent (Strawman Keeper; IsaacScript isChildPlayer)
--- and the Tainted Soul (own seed, same character as Tainted Forgotten, so a solo run counts one) get no number or badge.
+-- Playable characters only: co-op babies (variant 1; vanilla has no PlayerVariant enum) and the Tainted Soul (own seed, same character as Tainted Forgotten,
+-- so a solo run counts one) get no number or badge. Strawman's Keeper and Soul of Jacob and Esau's Esau, both with a Parent, are characters (user decision 2026-11-22).
 local function isCharacter(player)
 	if player.Variant ~= 0 then return false end
-	if player.Parent then return false end
 	return player:GetPlayerType() ~= PlayerType.PLAYER_THESOUL_B
 end
 
