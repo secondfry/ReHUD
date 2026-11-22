@@ -765,6 +765,32 @@ T = roundtrip(T); play(T, form(B, 29, 6, FL, EJ, ent='LJ'))
 replay(T, '... after a continue Lazarus Jr. stays character 3, Dead Lazarus character 2, items unswapped', (A, 0, True, (4, FL, EJ)), (B, 1, True, (5, FL)), (LJ, 2, False, (6, FL, EJ)))
 play(T, form(B, 38, 5, FL))  # Lazarus Jr. flips to Dead Lazarus (in-game 2026-11-22)
 replay(T, '... then Dead Lazarus plays as character 2 with its own items', (A, 0, True, (4, FL, EJ)), (B, 1, False, (5, FL)), (LJ, 2, True, (6, FL, EJ)))
+# saved while Lazarus plays with Dead Lazarus stored; after the Continue a fresh Esau Jr. makes Lazarus Jr. on Dead Lazarus's seed: a new character (user decision 2026-11-22)
+T = fresh()
+play(T, form(A, 29, 4, FL, EJ))
+play(T, form(B, 38, 5, FL))
+play(T, form(A, 29, 4, FL, EJ))
+T = roundtrip(T); play(T, form(A, 29, 4, FL, EJ))
+play(T, form(B, 29, 6, FL, EJ, ent='LJ'))
+replay(T, 'continue, then a fresh Esau Jr. makes Lazarus Jr. on Dead Lazarus\'s seed: character 3, Dead Lazarus keeps character 2 and c5', (A, 0, True, (4, FL, EJ)), (B, 1, True, (5, FL)), (LJ, 2, False, (6, FL, EJ)))
+play(T, form(B, 38, 5, FL))  # Lazarus Jr. flips to Dead Lazarus (in-game 2026-11-22)
+replay(T, '... Lazarus Jr. flips: Dead Lazarus back as character 2', (A, 0, True, (4, FL, EJ)), (B, 1, False, (5, FL)), (LJ, 2, True, (6, FL, EJ)))
+
+# saved with Isaac playing, A stored (its link B) and B stored (its link Isaac)
+def isaac_forms_saved():
+    T = fresh()
+    play(T, form(I0, 0, 1, EJ))
+    play(T, form(IA, 0, 2, EJ, 7))  # Isaac presses copy 1
+    play(T, form(IB, 0, 3, EJ))  # A presses copy 2
+    play(T, form(I0, 0, 1, EJ))  # B presses copy 1
+    T = roundtrip(T); play(T, form(I0, 0, 1, EJ))
+    return T
+T = isaac_forms_saved(); play(T, c_form())  # Isaac presses a third, fresh copy: C on A's seed (in-game 2026-11-22)
+replay(T, 'continue, then a fresh copy makes C on A\'s seed: C a new character, A keeps its number', (I0, 0, True, (1, EJ)), (IA, 1, True, (2, EJ, 7)), (IB, 2, True, (3, EJ)), (IC, 3, False, (8, EJ)))
+T = isaac_forms_saved(); play(T, form(IB, 0, 3, EJ))
+replay(T, 'continue, then copy 1 brings B back: B keeps its number', (I0, 0, True, (1, EJ)), (IA, 1, True, (2, EJ, 7)), (IB, 2, False, (3, EJ)))
+play(T, form(IA, 0, 2, EJ, 7))
+replay(T, '... and copy 2 brings A back: A keeps its number', (I0, 0, True, (1, EJ)), (IA, 1, False, (2, EJ, 7)), (IB, 2, True, (3, EJ)))
 
 # Strawman's Keeper (type 14, Parent set, own new seed; in-game 2026-11-22): a character with its own row
 KP = 920

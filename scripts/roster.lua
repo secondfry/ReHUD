@@ -54,12 +54,26 @@ local summoned = {} -- keys of Soul of Jacob and Esau's Esaus
 -- The tag holds a token renewed by Roster.reset, so a tag from an earlier run or session never counts (whether one survives a new run is unobserved).
 -- Exit & Continue wipes GetData (in-game 2026-11-22), so after a Continue the first character playing on a seed takes the key saved as live (not stored, not left) on it,
 -- keeping its character N (user decision 2026-11-22): the game brings back the character playing at the save.
+-- A saved stored key not yet handed out waits for its own character: a fresh Esau Jr. form on its seed (a newcomer holding Esau Jr. in its presser's place) is a new character
+-- with a new character N, unless the key's saved Esau Jr. link is that presser (user decision 2026-11-22); a Flip or any other arrival may take it.
 -- ReHUD saves only on exit (MC_PRE_GAME_EXIT), so after a crash the character numbers are those of the last exit; what the game restores after a crash is unobserved.
 -- shortcut: the stored ones take the seed's remaining keys in the order they play, with no RNG or item matching (user decision 2026-11-22), and two live ones on a seed (a Birthright twin of an Esau Jr. form) take its live keys in that order, so two stored ones, or two live ones, may swap character numbers: once each has played, its list holds its own copies under the current floor, but the numbers stay swapped; match by items if that gets reported.
+-- shortcut: after a Continue in a run juggling two Esau Jr. copies, a character returning through a copy whose saved link names another character gets a new character N while its old one stays listed; track the copy each character came through if that gets reported.
 local SEED_SPAN = 1 << 32
 local session, tagged = {}, {} -- this session's tag token; keys handed out this session
 local liveAtSave = {} -- by seed, the keys of the saved rows that were live at the save
-local function playerKey(player)
+
+local function holdsEsauJr(player)
+	return player:GetCollectibleNum(CollectibleType.COLLECTIBLE_ESAU_JR, true) > 0
+end
+
+-- Esau Jr.'s new form keeps the presser's type and holds Esau Jr. on its first update (in-game 2026-11-22); so does a stored character it brings back.
+local function esauJrPress(player, old)
+	return player:GetPlayerType() == typeOf[old] and holdsEsauJr(player)
+end
+
+-- `old`: the key at the player's GetPlayer index last update, the one a swap replaces.
+local function playerKey(player, old)
 	local seed, data = player:GetCollectibleRNG(1):GetSeed(), player:GetData()
 	if type(data) ~= "table" then return seed end -- after a Mods-menu Lua reset GetData returns a number until restart
 	local tag = data.ReHUD_key
@@ -68,7 +82,8 @@ local function playerKey(player)
 	for _, live in ipairs(liveAtSave[seed] or {}) do
 		if not tagged[live] then key = live break end
 	end
-	while tagged[key] do key = key + SEED_SPAN end
+	local fresh = esauJrPress(player, old)
+	while tagged[key] or (fresh and swapped[key] and esauJrForm[key] ~= old) do key = key + SEED_SPAN end -- an untagged swapped key is a saved stored one
 	tagged[key], data.ReHUD_key = true, { session = session, key = key }
 	return key
 end
@@ -162,10 +177,6 @@ local function presentIn(players, group)
 	end
 end
 
-local function holdsEsauJr(player)
-	return player:GetCollectibleNum(CollectibleType.COLLECTIBLE_ESAU_JR, true) > 0
-end
-
 -- Merges each stored Tainted Lazarus form whose partner is no longer its other form into `merged`.
 local function resolveStored(byKey, merged)
 	for key in pairs(swapped) do
@@ -192,14 +203,14 @@ end
 -- Stores `old`, no longer passed, when `p` (of type `t`) took its index by a swap rather than a join after a leave.
 local function storeSwapped(p, old, t, sameCount)
 	local esauJrReturn = esauJrForm[p.key] == old
-	-- Esau Jr.'s new form keeps the presser's type and holds Esau Jr. on its first update (in-game 2026-11-22); a press or return can also send away a Birthright twin, so the count may drop.
-	local esauJrPress = t == typeOf[old] and holdsEsauJr(p.player)
-	local esauJrNew = esauJrPress and not numberOf[p.key]
+	-- A press or return can also send away a Birthright twin, so the count may drop.
+	local pressed = esauJrPress(p.player, old)
+	local esauJrNew = pressed and not numberOf[p.key]
 	-- A stored character returning with Esau Jr. swapped too, whatever the count does (a Birthright pair coming back raises it; design guard, unobserved).
 	local storedReturn = swapped[p.key] and (sameCount or holdsEsauJr(p.player))
 	if not (esauJrReturn or esauJrNew or storedReturn or (sameCount and not numberOf[p.key])) then return end
 	swapped[old] = true
-	if esauJrReturn or esauJrPress then esauJrForm[old] = p.key end
+	if esauJrReturn or pressed then esauJrForm[old] = p.key end
 	-- shortcut: the partner is set once, while Flip partners change around Esau Jr. (Lazarus Jr. flips to Dead Lazarus; once Dead Lazarus uses Esau Jr., Flip switches Dead Lazarus Jr. and Lazarus Jr., in-game 2026-11-22), so a later partner can merge a stored form into the wrong one on Clicker; follow the observed Flip pairs if that gets reported.
 	if not numberOf[p.key] and not partnerOf[old] and TAINTED_LAZARUS[t] and TAINTED_LAZARUS[typeOf[old]] and t ~= typeOf[old] then partnerOf[old], partnerOf[p.key] = p.key, old end -- Flip: the new form is the presser's partner
 end
@@ -211,7 +222,7 @@ function Roster.observe(players)
 	pairForms() -- by the types of the last update, so a crossing this update still finds its partner
 	local byKey = {}
 	for _, p in ipairs(players) do
-		p.key = playerKey(p.player)
+		p.key = playerKey(p.player, keyAt[p.index])
 		byKey[p.key] = p
 	end
 
