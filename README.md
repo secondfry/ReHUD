@@ -10,8 +10,10 @@ Adds a more customizable smaller version of the "Extra HUD", which displays the 
 - **Shows as many items as fit on screen**, newest first, grouped by floor.
 - **Repentance floor names, in every game language**: Russian, Japanese, Korean and Chinese floor names no longer show up blank.
 - **New filters**: active items, and temporary items (Lemegeton wisps, Zodiac, 3 Dollar Bill), which are marked with a small clock.
+- **One icon per copy**: an item held twice (picked up twice, owned plus a character's innate copy like Cain's Lucky Foot, owned plus a Lemegeton wisp) shows twice. Each wisp, Zodiac or 3 Dollar Bill copy gets its own clock; when a copy goes, the oldest icon of that kind leaves.
 - **Timer** shows hundredths of a second.
-- **Co-op and Jacob and Esau**: lists every character's items, grouped by player within each floor and each marked with a character number when there is more than one (Esau, each Tainted Lazarus form and an Esau Jr. form get their own). A dead player's items stay listed; items of players who leave stay hidden unless **Show items of players who left** is on.
+- **Co-op and Jacob and Esau**: lists every character's items, grouped by player within each floor and each marked with a character number when there is more than one (Esau, each Tainted Lazarus form and an Esau Jr. form get their own). A dead player's items stay listed; items of players who leave stay hidden unless **Show items of players who left** is on. When Clicker turns Jacob and Esau into one character, Esau's items move to it and keep their floors (his temporary items go); Clicker into Jacob and Esau gives the new Esau his share, floors kept.
+- **Characters survive swaps**: Tainted Lazarus's Flip (Birthright too), Esau Jr., Clicker and Continue keep each character's items under its own number (rare same-seed cases around Esau Jr. list as one). A swapped-out form stays listed until it comes back; when the game loses it for good (Clicker or a type change merging Tainted Lazarus's forms, the character holding Esau Jr. after a swap losing it), reHUD moves or drops its items the same way.
 
 ## Features of original
 - **Display your last collected items on the screen**. over 100 of them instead of the last 10 in the normal game.

@@ -1,4 +1,5 @@
--- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { character keys }, roster = { { key, number, group, swapped, left, innate = { { type, ids } } } } }; earlier versions wrote neither owner nor roster, and older saves have no innate.
+-- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { character keys }, temporary = { booleans, 0 for unknown }, roster = { { key, number, group, swapped, left, innate = { { type, ids } }, type, partner, esauJr } } };
+-- earlier versions wrote neither owner nor roster, older saves have no innate, and saves before 2.8 no temporary, type, partner or esauJr.
 local json = require("json")
 
 local Save = {}
@@ -18,11 +19,11 @@ local function mergeConfig(config, saved)
 	end
 end
 
-function Save.write(mod, config, ids, floors, owners, rows)
-	mod:SaveData(json.encode({ config = config, items = ids, floor = floors, owner = owners, roster = rows }))
+function Save.write(mod, config, ids, floors, owners, rows, temporaries)
+	mod:SaveData(json.encode({ config = config, items = ids, floor = floors, owner = owners, roster = rows, temporary = temporaries }))
 end
 
--- Merges saved settings into `config` and returns the saved item ids, floor names, owners and roster rows (nil if there is no usable save).
+-- Merges saved settings into `config` and returns the saved item ids, floor names, owners, roster rows and temporary flags (nil if there is no usable save).
 function Save.read(mod, config)
 	if not mod:HasData() then return end
 
@@ -30,7 +31,7 @@ function Save.read(mod, config)
 	if not ok or type(data) ~= "table" then return end
 
 	mergeConfig(config, data.config)
-	return data.items, data.floor, data.owner, data.roster
+	return data.items, data.floor, data.owner, data.roster, data.temporary
 end
 
 return Save
