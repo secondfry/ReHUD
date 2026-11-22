@@ -48,22 +48,28 @@ local summoned = {} -- keys of Soul of Jacob and Esau's Esaus
 -- one whose seed is already tagged this session is another character and takes the seed plus a multiple of SEED_SPAN (seeds are 32-bit), so a saved key still names its seed.
 -- Whether a tag stays with its character through a Tainted Lazarus Flip, or with each Birthright twin apart, is unobserved; the same-seed Flip and twin cases rely on it.
 -- The tag holds a token renewed by Roster.reset, so a tag from an earlier run or session never counts (whether one survives a new run is unobserved).
--- shortcut: Exit & Continue wipes GetData (in-game 2026-11-22), so after a Continue each character takes its seed's first key not tagged since, in the order they play, with no RNG or item matching (user decision 2026-11-22): same-seed characters may take each other's rows, each listing the live one's copies under the current floor, until each has played again; prefer the row of the character playing at the save if that gets reported.
+-- Exit & Continue wipes GetData (in-game 2026-11-22), so after a Continue the first character playing on a seed takes the key saved as live (not stored, not left) on it,
+-- keeping its character N (user decision 2026-11-22): the game brings back the character playing at the save; a crash writes no save, so the last save's live one counts.
+-- shortcut: the stored ones take the seed's remaining keys in the order they play, with no RNG or item matching (user decision 2026-11-22), and two live ones on a seed (a Birthright twin of an Esau Jr. form) take its live keys in that order, so two stored ones, or two live ones, may take each other's rows, each listing the live one's copies under the current floor, until each has played again; match by items if that gets reported.
 local SEED_SPAN = 1 << 32
 local session, tagged = {}, {} -- this session's tag token; keys handed out this session
+local liveAtSave = {} -- by seed, the keys of the saved rows that were live at the save
 local function playerKey(player)
 	local seed, data = player:GetCollectibleRNG(1):GetSeed(), player:GetData()
 	if type(data) ~= "table" then return seed end -- after a Mods-menu Lua reset GetData returns a number until restart
 	local tag = data.ReHUD_key
 	if tag and tag.session == session then return tag.key end
 	local key = seed
+	for _, live in ipairs(liveAtSave[seed] or {}) do
+		if not tagged[live] then key = live break end
+	end
 	while tagged[key] do key = key + SEED_SPAN end
 	tagged[key], data.ReHUD_key = true, { session = session, key = key }
 	return key
 end
 
 function Roster.reset()
-	session, tagged, summoned = {}, {}, {}
+	session, tagged, summoned, liveAtSave = {}, {}, {}, {}
 	numberOf, nextNumber = {}, 0
 	swapped, keyAt, lastPlayers = {}, {}, 0
 	left = {}
@@ -85,6 +91,11 @@ function Roster.claim(key, number, isSwapped, isLeft, group, innate, playerType,
 	swapped[key], left[key], innateOf[key] = isSwapped or nil, isLeft or nil, innate
 	typeOf[key] = playerType or (isSwapped and lazarusRow(innate)) or nil
 	partnerOf[key], esauJrForm[key], summoned[key] = partner, isSwapped and esauJr or nil, isSummoned or nil
+	if not isSwapped and not isLeft then
+		local seed = key % SEED_SPAN
+		liveAtSave[seed] = liveAtSave[seed] or {}
+		table.insert(liveAtSave[seed], key)
+	end
 	if group and group <= MAX_NUMBER then
 		nextGroup = math.max(nextGroup, group + 1)
 	else

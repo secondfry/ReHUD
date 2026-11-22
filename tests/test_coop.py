@@ -743,9 +743,11 @@ replay(T, 'same-seed Isaac forms: C on A\'s seed gets its own row', (I0, 0, True
 play(T, form(IA, 0, 2, EJ, 7))
 replay(T, '... A plays again: its own row and items, C stored', (I0, 0, True, (1, EJ)), (IA, 1, False, (2, EJ, 7)), (IB, 2, True, (3, EJ)), (IC, 3, True, (8, EJ)))
 T = roundtrip(T); play(T, form(IA, 0, 2, EJ, 7)); play(T, c_form())
-replay(T, '... after a continue (GetData wiped) each takes its seed\'s keys in the order they play, here the right ones', (I0, 0, True, (1, EJ)), (IA, 1, True, (2, EJ, 7)), (IB, 2, True, (3, EJ)), (IC, 3, False, (8, EJ)))
+replay(T, '... after a continue (GetData wiped) A, live at the save, keeps its row; C takes the seed\'s other key', (I0, 0, True, (1, EJ)), (IA, 1, True, (2, EJ, 7)), (IB, 2, True, (3, EJ)), (IC, 3, False, (8, EJ)))
 T = roundtrip(T); play(T, c_form())
-check('... C playing first after a continue takes A\'s row (shortcut: stated limit)', (IA, 1, False) in rows(T), rows(T))
+replay(T, '... C, live at the save, keeps its row after a continue', (I0, 0, True, (1, EJ)), (IA, 1, True, (2, EJ, 7)), (IB, 2, True, (3, EJ)), (IC, 3, False, (8, EJ)))
+play(T, form(IA, 0, 2, EJ, 7))
+replay(T, '... then A plays: its own row and items', (I0, 0, True, (1, EJ)), (IA, 1, False, (2, EJ, 7)), (IB, 2, True, (3, EJ)), (IC, 3, True, (8, EJ)))
 
 # Tainted Lazarus (29) pressing Esau Jr. with the Dead form (38) stored makes a type-29 form on the Dead form's seed (in-game 2026-11-22)
 LJ = B + 2**32
@@ -755,6 +757,11 @@ play(T, form(B, 38, 5, FL))
 play(T, form(A, 29, 4, FL, EJ))
 play(T, other(form(B, 29, 6, FL, EJ), 'LJ'))
 replay(T, 'Tainted Lazarus form on Dead Lazarus\'s seed: own row, both forms stored with their items', (A, 0, True, (4, FL, EJ)), (B, 1, True, (5, FL)), (LJ, 2, False, (6, FL, EJ)))
+# saved while Lazarus Jr. (character 3) plays; Dead Lazarus (character 2) shares its seed (user decision 2026-11-22: the live one keeps its character N)
+T = roundtrip(T); play(T, other(form(B, 29, 6, FL, EJ), 'LJ'))
+replay(T, '... after a continue Lazarus Jr. stays character 3, Dead Lazarus character 2, items unswapped', (A, 0, True, (4, FL, EJ)), (B, 1, True, (5, FL)), (LJ, 2, False, (6, FL, EJ)))
+play(T, form(B, 38, 5, FL))  # Lazarus Jr. flips to Dead Lazarus (in-game 2026-11-22)
+replay(T, '... then Dead Lazarus plays as character 2 with its own items', (A, 0, True, (4, FL, EJ)), (B, 1, False, (5, FL)), (LJ, 2, True, (6, FL, EJ)))
 
 # Strawman's Keeper (type 14, Parent set, own new seed; in-game 2026-11-22): a character with its own row
 KP = 920
