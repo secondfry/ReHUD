@@ -4,8 +4,8 @@ from stubs import *
 
 # ids: 1 Sad Onion (real), 2 Lucky Foot, 3 Clicker->Lemegeton (real), 4..9 wisp items
 CAIN, ESAU = 500, 501
-def jacob(mod): p = P({1:1,2:1,3:1}, mod, seed=CAIN, ptype=19); p.ControllerIndex = -2; return p
-def esau(): p = P({}, {}, seed=ESAU, ptype=20); p.ControllerIndex = -2; return p
+def jacob(mod): return P({1:1,2:1,3:1}, mod, seed=CAIN, ptype=19, ctrl=-2)
+def esau(): return P({}, {}, seed=ESAU, ptype=20, ctrl=-2)
 # started Cain: Lucky Foot owned + innate, Lemegeton, wisps after settle
 T = fresh(); c = lambda mod: L((0, P({2:1,3:1}, {2:1, **mod}, seed=CAIN, ptype=2)))
 run(T, c({})); W((4, CAIN)); run(T, c({4:1})); W((4, CAIN), (5, CAIN)); run(T, c({4:1,5:1})); W()

@@ -10,7 +10,7 @@ for f in [repo/'main.lua', *sorted((repo/'scripts').glob('*.lua'))]:
     assert r is None, (f, r); print('syntax ok', f.name)
 lua.execute(r'''
 ItemType = { ITEM_PASSIVE = 1, ITEM_ACTIVE = 3, ITEM_FAMILIAR = 4 }
-PlayerType = { PLAYER_LAZARUS_B = 29, PLAYER_LAZARUS2_B = 38, PLAYER_THESOUL_B = 40 } -- checked against enums.lua below
+PlayerType = { PLAYER_LAZARUS_B = 29, PLAYER_LAZARUS2_B = 38, PLAYER_ESAU = 20, PLAYER_THESOUL_B = 40 } -- checked in test_coop
 local items = {}
 for i = 1, 20 do items[i] = { Type = 1, GfxFileName = "item" .. i } end
 Isaac = { GetItemConfig = function() return {
@@ -19,7 +19,7 @@ Isaac = { GetItemConfig = function() return {
 floorName = "B1"
 Game = function() return { GetLevel = function() return { GetName = function() return floorName end } end } end
 CollectibleType = { COLLECTIBLE_ESAU_JR = 13 } -- stub id (703 in enums.lua, checked in test_coop): the item stubs stop at 20
-EntityType = { ENTITY_FAMILIAR = 3 }; FamiliarVariant = { ITEM_WISP = 237 } -- checked against enums.lua below
+EntityType = { ENTITY_FAMILIAR = 3 }; FamiliarVariant = { ITEM_WISP = 237 } -- checked in test_coop
 wispList = {}
 Isaac.FindByType = function(t, v) assert(t == 3 and v == 237); return wispList end
 GetPtrHash = function(e) return e.seed end
@@ -41,9 +41,9 @@ g = lua.globals(); g.REPO = str(repo)
 lua.execute('include = function(name) return dofile(REPO .. "/" .. name:gsub("%.", "/") .. ".lua") end')
 def fresh():  # a new run or a Continue: GetData starts empty (after a Continue in-game 2026-11-22; after a new run unobserved)
     lua.execute('dataOf = {}'); return lua.execute(src)
-# ent: the entity, for GetData; set it apart for characters sharing a seed (Esau Jr. forms, a Birthright twin of one)
-def P(real={}, mod={}, variant=0, ghost=False, seed=None, ptype=0, ent=None):
-    p = g.mkplayer(lua.table_from(real), lua.table_from(mod), variant, ghost, seed); p.ptype, p.ent = ptype, ent
+# ent: the entity, for GetData; set it apart for characters sharing a seed (Esau Jr. forms, a Birthright twin of one). ctrl: ControllerIndex, default set by L
+def P(real={}, mod={}, variant=0, ghost=False, seed=None, ptype=0, ent=None, ctrl=None, zodiac=None):
+    p = g.mkplayer(lua.table_from(real), lua.table_from(mod), variant, ghost, seed); p.ptype, p.ent, p.ControllerIndex, p.zodiac = ptype, ent, ctrl, zodiac
     return p
 def L(*ps):
     for i, p in ps:

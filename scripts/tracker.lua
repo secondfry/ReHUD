@@ -16,13 +16,23 @@ local lastCount, sinceScan = nil, 0 -- scan trigger value at the last scan and u
 local ordered -- display order of the entries, rebuilt by Tracker.ordered() after any change; nil means stale
 local hashOf, inherited = {}, {} -- GetPtrHash by key, of the players passed this update (read for merged keys before it is rebuilt); hashes of merged characters by the key they merged into, while it settles
 
-local function add(id, owner, number, floor, temporary)
+-- `owner` nil (unresolved) shows as character 1.
+local function add(id, owner, floor, temporary)
 	local item = itemConfig:GetCollectible(id)
 	if not item then return end
-	local entry = { id = id, owner = owner, number = number, floor = floor, type = item.Type, temporary = temporary }
+	local entry = { id = id, owner = owner, number = owner and roster.number(owner) or 0, floor = floor, type = item.Type, temporary = temporary }
 	table.insert(Tracker.entries, entry)
 	ordered = nil
 	return entry
+end
+
+local function reassign(entry, key)
+	entry.owner, entry.number, ordered = key, roster.number(key), nil
+end
+
+-- A living character still learning its innate items.
+local function learning(p)
+	return not p.ghost and roster.isSettling(p.key)
 end
 
 -- A saved integer of at least 0 (integral floats count), else nil.
@@ -62,7 +72,7 @@ end
 local function attribute(players, wisps)
 	local byHash = {}
 	for _, p in ipairs(players) do
-		if not p.ghost and roster.isSettling(p.key) then
+		if learning(p) then
 			p.wisps, p.zodiac = {}, p.player:GetZodiacEffect()
 			byHash[hashOf[p.key]] = p.wisps
 		end
@@ -103,7 +113,7 @@ local function scanDue(players, wispCount)
 	local count, settling = wispCount, false
 	for _, p in ipairs(players) do
 		count = count + p.player:GetCollectibleCount() + p.player:GetZodiacEffect()
-		settling = settling or (not p.ghost and roster.isSettling(p.key))
+		settling = settling or learning(p)
 	end
 	sinceScan = sinceScan + 1
 	if count == lastCount and sinceScan < SCAN_INTERVAL and not settling then return false end
@@ -128,7 +138,10 @@ function Tracker.restore(ids, floors, owners, rows, temporaries)
 		for _, row in ipairs(rows) do
 			if type(row) ~= "table" then goto nextRow end
 			local key, number = savedInteger(row.key), savedInteger(row.number)
-			if key and number then roster.claim(key, number, row.swapped == true, row.left == true, savedInteger(row.group), savedInnate(row.innate), savedInteger(row.type), savedInteger(row.partner), savedInteger(row.esauJr), row.summoned == true) end
+			if key and number then
+				roster.claim({ key = key, number = number, swapped = row.swapped == true, left = row.left == true, group = savedInteger(row.group), innate = savedInnate(row.innate),
+					type = savedInteger(row.type), partner = savedInteger(row.partner), esauJr = savedInteger(row.esauJr), summoned = row.summoned == true })
+			end
 			::nextRow::
 		end
 	end
@@ -141,7 +154,7 @@ function Tracker.restore(ids, floors, owners, rows, temporaries)
 		if owner and not roster.number(owner) then owner = nil end -- no roster row: loads like an old save
 		local temporary = temporaries[i]
 		if type(temporary) ~= "boolean" then temporary = nil end
-		local entry = add(id, owner, owner and roster.number(owner) or 0, tostring(floors[i] or ""), temporary)
+		local entry = add(id, owner, tostring(floors[i] or ""), temporary)
 		if entry then entry.left = roster.isLeft(owner) or nil end
 		::continue::
 	end
@@ -185,37 +198,30 @@ function Tracker.update(players)
 	-- shortcut: assumes the new Esau appears in the update Jacob loses his share (both in-game splits did, 2026-11-21), else the moved copies list under the current floor; and which floors of one item go to Esau is a guess (Jacob keeps his newest; the engine's pick is unknown); measure the engine's order if that gets reported.
 	local function heir(p, id)
 		for _, q in ipairs(players) do
-			if q ~= p and not q.ghost and roster.group(q.key) == roster.group(p.key) and roster.isSettling(q.key) and slots(q, id)[1] > 0 then return q end
+			if q ~= p and learning(q) and roster.group(q.key) == roster.group(p.key) and slots(q, id)[1] > 0 then return q end
 		end
 	end
 
-	-- Newest first, so when a kind has fewer copies than entries the oldest entries of that kind go.
-	-- shortcut: vanilla cannot tell which copy was lost, so the oldest icon of that kind leaves; track copies by source if that reads wrong.
-	local entries = Tracker.entries
-	for i = #entries, 1, -1 do
-		local entry = entries[i]
-		if not entry.owner and firstKey then entry.owner, entry.number, ordered = firstKey, roster.number(firstKey), nil end
-		if not entry.owner then goto continue end -- old save: waits for a living player 0
+	-- Matches one entry to a copy its owner still holds; true when the entry goes.
+	local function refresh(entry)
+		if not entry.owner and firstKey then reassign(entry, firstKey) end
+		if not entry.owner then return end -- old save: waits for a living player 0
 		local into = merged[entry.owner]
-		if into and not entry.temporary then entry.owner, entry.number, ordered = into, roster.number(into), nil end
+		if into and not entry.temporary then reassign(entry, into) end
 		if survivors[entry.owner] and not entry.temporary then entry.merged = true end
-		if not roster.number(entry.owner) then -- a merged character's clocked copies, a stored Tainted Lazarus form merged away, or a summoned Esau who left
-			table.remove(entries, i)
-			ordered = nil
-			goto continue
-		end
+		if not roster.number(entry.owner) then return true end -- a merged character's clocked copies, a stored Tainted Lazarus form merged away, or a summoned Esau who left
 		local p = byKey[entry.owner]
 		if not p and roster.isSwapped(entry.owner) then
 			known[entry.number], entry.merged = true, nil
-			goto continue
+			return
 		end
 		if not p then
 			roster.markLeft(entry.owner)
 			entry.left, gone[entry.number] = true, true
-			goto continue
+			return
 		end
 		entry.left = nil -- back in the run
-		if p.ghost then goto continue end -- frozen
+		if p.ghost then return end -- frozen
 		if entry.merged and not roster.isSettling(p.key) then entry.merged = nil end
 		local slot = slots(p, entry.id)
 		local kind = entry.temporary and 2 or 1
@@ -223,20 +229,26 @@ function Tracker.update(players)
 		local q = slot[kind] == 0 and kind == 1 and heir(p, entry.id)
 		if q then
 			local s = slots(q, entry.id)
-			s[1], entry.owner, entry.number, entry.temporary, ordered = s[1] - 1, q.key, roster.number(q.key), false, nil
-			goto continue
+			s[1], entry.temporary = s[1] - 1, false
+			reassign(entry, q.key)
+			return
 		end
 		-- Copies without a clock held through a merge may reach the survivor some updates later (unmeasured): kept while it settles, so they keep their floors.
 		-- shortcut: a copy the merge lost (Clicker's removal) shows for up to SETTLE_UPDATES before the oldest leaves, and copies that reach the survivor before the other character vanishes list under the current floor; measure the engine's order if that gets reported.
 		-- shortcut: a merge into a player type the survivor already had does not settle, so merged copies that arrive after the merge update list under the current floor; give merges their own window if that gets reported.
-		if slot[kind] == 0 and entry.merged then goto continue end
-		if slot[kind] == 0 then
+		if slot[kind] == 0 and entry.merged then return end
+		if slot[kind] == 0 then return true end
+		slot[kind], entry.temporary = slot[kind] - 1, kind == 2
+	end
+
+	-- Newest first, so when a kind has fewer copies than entries the oldest entries of that kind go.
+	-- shortcut: vanilla cannot tell which copy was lost, so the oldest icon of that kind leaves; track copies by source if that reads wrong.
+	local entries = Tracker.entries
+	for i = #entries, 1, -1 do
+		if refresh(entries[i]) then
 			table.remove(entries, i)
 			ordered = nil
-			goto continue
 		end
-		slot[kind], entry.temporary = slot[kind] - 1, kind == 2
-		::continue::
 	end
 	Tracker.characterCount, Tracker.leftCount = size(known), size(gone)
 
@@ -249,8 +261,8 @@ function Tracker.update(players)
 		for _, p in ipairs(players) do
 			if p.ghost then goto nextPlayer end
 			local slot = slots(p, id)
-			for _ = 1, slot[1] do add(id, p.key, roster.number(p.key), floor, false) end
-			for _ = 1, slot[2] do add(id, p.key, roster.number(p.key), floor, true) end
+			for _ = 1, slot[1] do add(id, p.key, floor, false) end
+			for _ = 1, slot[2] do add(id, p.key, floor, true) end
 			::nextPlayer::
 		end
 		::nextId::

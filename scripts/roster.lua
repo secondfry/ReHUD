@@ -9,10 +9,13 @@ local MAX_NUMBER = 63 -- sanity cap for saved character and group numbers, far a
 -- Groups are numbered first seen like characters; groupFor maps a ControllerIndex to its group and is relearned from present characters after a continue.
 local groupOf, groupFor, nextGroup = {}, {}, 0
 
--- Tainted Lazarus's Flip and Esau Jr. put another character at the same GetPlayer index and store the old one: a Flip's other form has its own seed, Esau Jr.'s form a new one, the presser's other form's (a stored Dead form or a Birthright twin), after a Continue the presser's own once its original was lost, or, from a third fresh copy, an earlier form's (in-game 2026-11-21 and 2026-11-22), and a Flip of an Esau Jr. form keeps its seed. The stored character's items are frozen like a ghost's, and shown, rather than marked as left.
+-- Tainted Lazarus's Flip and Esau Jr. put another character at the same GetPlayer index and store the old one. The stored character's items are frozen like a ghost's, and shown, rather than marked as left.
+-- A Flip's other form has its own seed. Esau Jr.'s form gets a new seed, or the presser's other form's (a stored Dead form or a Birthright twin), or after a Continue the presser's own once its original was lost,
+-- or, from a third fresh copy, an earlier form's (in-game 2026-11-21 and 2026-11-22). A form on the Dead form's seed flipped to type 38 on that seed (in-game 2026-11-22); a fresh-seed form's Flip is unobserved.
 -- When a player leaves, the player's swapped-out forms leave too: nobody is left to swap them back (see Roster.markLeft).
--- A character that vanishes, not swapped out, while another living one of its group is still present (a ghost cannot use Clicker), and its group has fewer members than at the last update, is a character who left, not a player: it merged into that one
--- (Clicker turning Jacob & Esau into one character moves Esau's owned items to it, in-game 2026-11-21). It is forgotten, and observe returns it so the tracker moves its items.
+-- A character can vanish, not swapped out, while its group has fewer members than at the last update and another living one of it is still present (a ghost cannot use Clicker).
+-- That is a character who left, not a player: it merged into that one (Clicker turning Jacob & Esau into one character moves Esau's owned items to it, in-game 2026-11-21).
+-- It is forgotten, and observe returns it so the tracker moves its items.
 -- Tainted Lazarus's two forms are partners (partnerOf). A stored form whose partner in play stops being its other form merges into it like Esau:
 -- Clicker and ChangePlayerType out of Tainted Lazarus, or into the stored form's own type, gave the partner both forms' items, and the old form never returns (in-game 2026-11-21).
 -- An Esau Jr. swap links the stored character with the live one it swapped with (esauJrForm, both ways): the stored one never merges, and stays listed until the run ends (user decision 2026-11-22):
@@ -23,7 +26,7 @@ local left = {} -- keys of players who left the run; their items stay, hidden un
 local TAINTED_LAZARUS = { [PlayerType.PLAYER_LAZARUS_B] = true, [PlayerType.PLAYER_LAZARUS2_B] = true }
 
 -- The one Tainted Lazarus type saved innate rows show, for saves without a type.
-local function lazarusRow(innate)
+local function savedLazarusType(innate)
 	if not innate then return end
 	local a, b = innate[PlayerType.PLAYER_LAZARUS_B], innate[PlayerType.PLAYER_LAZARUS2_B]
 	if a and not b then return PlayerType.PLAYER_LAZARUS_B end
@@ -43,14 +46,16 @@ local summoned = {} -- keys of Soul of Jacob and Esau's Esaus
 
 -- The GetPlayer index shifts when a co-op player leaves; the Sad Onion RNG seed stays the player's for the whole run, saves included (IsaacScript getPlayerIndex).
 -- shortcut: a mod calling Next() on that RNG changes the key only across a Continue (within a session the GetData tag below holds it), and that character's items then re-list under the current floor; switch to a sturdier key if that gets reported.
--- Characters can share one seed around Esau Jr. (a form on its presser's Dead form's seed, a third copy's form on an earlier form's seed, Birthright on a form, a form's Flip; in-game 2026-11-22),
+-- Characters can share one seed around Esau Jr. (a form on its presser's Dead form's seed, a third copy's form on an earlier form's seed, Birthright on a form; in-game 2026-11-22).
+-- A form on the Dead form's seed flipped to type 38 on that seed (in-game 2026-11-22); a fresh-seed form's Flip is unobserved.
 -- so each character carries its key in a namespaced GetData() tag, which follows it through Esau Jr. storage within a session (in-game 2026-11-22). The first character of a seed keys by the seed;
 -- one whose seed is already tagged this session is another character and takes the seed plus a multiple of SEED_SPAN (seeds are 32-bit), so a saved key still names its seed.
 -- Whether a tag stays with its character through a Tainted Lazarus Flip, or with each Birthright twin apart, is unobserved; the same-seed Flip and twin cases rely on it.
 -- The tag holds a token renewed by Roster.reset, so a tag from an earlier run or session never counts (whether one survives a new run is unobserved).
 -- Exit & Continue wipes GetData (in-game 2026-11-22), so after a Continue the first character playing on a seed takes the key saved as live (not stored, not left) on it,
--- keeping its character N (user decision 2026-11-22): the game brings back the character playing at the save; a crash writes no save, so the last save's live one counts.
--- shortcut: the stored ones take the seed's remaining keys in the order they play, with no RNG or item matching (user decision 2026-11-22), and two live ones on a seed (a Birthright twin of an Esau Jr. form) take its live keys in that order, so two stored ones, or two live ones, may take each other's rows, each listing the live one's copies under the current floor, until each has played again; match by items if that gets reported.
+-- keeping its character N (user decision 2026-11-22): the game brings back the character playing at the save.
+-- ReHUD saves only on exit (MC_PRE_GAME_EXIT), so after a crash the character numbers are those of the last exit; what the game restores after a crash is unobserved.
+-- shortcut: the stored ones take the seed's remaining keys in the order they play, with no RNG or item matching (user decision 2026-11-22), and two live ones on a seed (a Birthright twin of an Esau Jr. form) take its live keys in that order, so two stored ones, or two live ones, may swap character numbers: once each has played, its list holds its own copies under the current floor, but the numbers stay swapped; match by items if that gets reported.
 local SEED_SPAN = 1 << 32
 local session, tagged = {}, {} -- this session's tag token; keys handed out this session
 local liveAtSave = {} -- by seed, the keys of the saved rows that were live at the save
@@ -80,18 +85,20 @@ end
 
 -- Registers a known character (from a save); a key already known keeps its number, and an out-of-range or taken number is refused.
 -- A missing or out-of-range group (rows from before groups) gives the character a group of its own, after every real one and ordered by its number.
--- `innate`: parsed innate counts by player type, nil to re-learn. `playerType`: nil in saves before it was saved; a stored form's single Tainted Lazarus innate row stands in.
--- `partner`: the other Tainted Lazarus form's key; `esauJr`: the substitute for an Esau Jr. original; `isSummoned`: a Soul of Jacob and Esau's Esau.
-function Roster.claim(key, number, isSwapped, isLeft, group, innate, playerType, partner, esauJr, isSummoned)
+-- `row`: a validated saved row, fields as Roster.serialize writes them; key and number are integers of at least 0, swapped, left and summoned booleans, the rest may be nil.
+-- `innate`: parsed innate counts by player type, nil to re-learn. `type`: nil in saves before it was saved; a stored form's single Tainted Lazarus innate row stands in.
+-- `partner`: the other Tainted Lazarus form's key; `esauJr`: the substitute for an Esau Jr. original; `summoned`: a Soul of Jacob and Esau's Esau.
+function Roster.claim(row)
+	local key, number, group = row.key, row.number, row.group
 	if numberOf[key] or number > MAX_NUMBER then return end
 	for _, taken in pairs(numberOf) do
 		if taken == number then return end
 	end
 	numberOf[key], nextNumber = number, math.max(nextNumber, number + 1)
-	swapped[key], left[key], innateOf[key] = isSwapped or nil, isLeft or nil, innate
-	typeOf[key] = playerType or (isSwapped and lazarusRow(innate)) or nil
-	partnerOf[key], esauJrForm[key], summoned[key] = partner, isSwapped and esauJr or nil, isSummoned or nil
-	if not isSwapped and not isLeft then
+	swapped[key], left[key], innateOf[key] = row.swapped or nil, row.left or nil, row.innate
+	typeOf[key] = row.type or (row.swapped and savedLazarusType(row.innate)) or nil
+	partnerOf[key], esauJrForm[key], summoned[key] = row.partner, row.swapped and row.esauJr or nil, row.summoned or nil
+	if not row.swapped and not row.left then
 		local seed = key % SEED_SPAN
 		liveAtSave[seed] = liveAtSave[seed] or {}
 		table.insert(liveAtSave[seed], key)
@@ -105,14 +112,14 @@ function Roster.claim(key, number, isSwapped, isLeft, group, innate, playerType,
 end
 
 -- Counts down the settle window and starts one when the character appears as a player type it has no innate counts for.
-local function settle(p)
-	local key, playerType = p.key, p.player:GetPlayerType()
+local function settle(key, playerType)
 	settleRemaining[key] = settleRemaining[key] and settleRemaining[key] > 1 and settleRemaining[key] - 1 or nil
-	innateOf[key], typeOf[key] = innateOf[key] or {}, playerType
+	innateOf[key] = innateOf[key] or {}
 	if innateOf[key][playerType] then return end -- a type seen before (The Forgotten and his Soul) does not settle again
 	innateOf[key][playerType], settleRemaining[key] = {}, SETTLE_UPDATES
 end
 
+-- Clears every record of `key` and its partner's link to it; esauJrForm links to it stay on purpose (absorber skips linked keys, an Esau Jr. return matches only keys in play, and a saved link is restored only for stored rows).
 local function forget(key)
 	numberOf[key], groupOf[key], swapped[key], left[key] = nil, nil, nil, nil
 	innateOf[key], typeOf[key], settleRemaining[key] = nil, nil, nil
@@ -170,6 +177,33 @@ local function resolveStored(byKey, merged)
 	end
 end
 
+local STORED, LEFT = "stored", "left"
+-- What became of `old`, in play last update and gone now unstored: STORED, LEFT, or the key it merged into. `lost`: members each group has fewer than last update.
+local function vanished(old, byKey, players, inBefore, lost)
+	-- shortcut: a Flip or Esau Jr. swap in the same update as another group's count change (a co-op leave, or a Clicker merge or split) is not seen as a swap, so the swapped-out form reads as left (items kept, hidden) until it plays again; compare counts per group if that gets reported.
+	local partner = partnerOf[old]
+	-- Birthright lost: Flip stores the other form again; or an Esau Jr. swap stored its twin with it (in play last update, stored this one), not a long-stored partner of a leaver
+	if byKey[partner] or (swapped[partner] and inBefore[partner]) then return STORED end
+	-- A group that kept its count swapped, so a co-op leave beside it stays a leave.
+	-- shortcut: a Strawman Keeper vanishing while its group plays on (unobserved; its ControllerIndex is unchecked) reads as a merge, so its owned items move to that character; give helpers their own leave rule if that gets reported.
+	return (lost[groupOf[old]] or 0) > 0 and presentIn(players, groupOf[old]) or LEFT
+end
+
+-- Stores `old`, no longer passed, when `p` (of type `t`) took its index by a swap rather than a join after a leave.
+local function storeSwapped(p, old, t, sameCount)
+	local esauJrReturn = esauJrForm[p.key] == old
+	-- Esau Jr.'s new form keeps the presser's type and holds Esau Jr. on its first update (in-game 2026-11-22); a press or return can also send away a Birthright twin, so the count may drop.
+	local esauJrPress = t == typeOf[old] and holdsEsauJr(p.player)
+	local esauJrNew = esauJrPress and not numberOf[p.key]
+	-- A stored character returning with Esau Jr. swapped too, whatever the count does (a Birthright pair coming back raises it; design guard, unobserved).
+	local storedReturn = swapped[p.key] and (sameCount or holdsEsauJr(p.player))
+	if not (esauJrReturn or esauJrNew or storedReturn or (sameCount and not numberOf[p.key])) then return end
+	swapped[old] = true
+	if esauJrReturn or esauJrPress then esauJrForm[old] = p.key end
+	-- shortcut: the partner is set once, while Flip partners change around Esau Jr. (Lazarus Jr. flips to Dead Lazarus; once Dead Lazarus uses Esau Jr., Flip switches Dead Lazarus Jr. and Lazarus Jr., in-game 2026-11-22), so a later partner can merge a stored form into the wrong one on Clicker; follow the observed Flip pairs if that gets reported.
+	if not numberOf[p.key] and not partnerOf[old] and TAINTED_LAZARUS[t] and TAINTED_LAZARUS[typeOf[old]] and t ~= typeOf[old] then partnerOf[old], partnerOf[p.key] = p.key, old end -- Flip: the new form is the presser's partner
+end
+
 -- Sets `p.key` on each of `players` ({ index, player, ghost }), numbers newcomers and marks swaps; returns the players by key,
 -- and the keys of characters merged this update, each with the key it merged into.
 -- Must run every update: a swap is told from a leave by comparing with the previous update.
@@ -186,19 +220,9 @@ function Roster.observe(players)
 	for _, p in ipairs(players) do
 		local old = keyAt[p.index]
 		local t = p.player:GetPlayerType()
-		local esauJrReturn = old and esauJrForm[p.key] == old
-		-- Esau Jr.'s new form keeps the presser's type and holds Esau Jr. on its first update (in-game 2026-11-22); a press or return can also send away a Birthright twin, so the count may drop.
-		local esauJrNew = old and not numberOf[p.key] and t == typeOf[old] and holdsEsauJr(p.player)
-		if old and not byKey[old] and (esauJrReturn or esauJrNew or (sameCount and (not numberOf[p.key] or swapped[p.key]))) then
-			swapped[old] = true
-			if esauJrReturn or (t == typeOf[old] and holdsEsauJr(p.player)) then
-				esauJrForm[old] = p.key
-			end
-			-- shortcut: the partner is set once, while Flip partners change around Esau Jr. (Lazarus Jr. flips to Dead Lazarus; once Dead Lazarus uses Esau Jr., Flip switches Dead Lazarus Jr. and Lazarus Jr., in-game 2026-11-22), so a later partner can merge a stored form into the wrong one on Clicker; follow the observed Flip pairs if that gets reported.
-			if not numberOf[p.key] and not partnerOf[old] and TAINTED_LAZARUS[t] and TAINTED_LAZARUS[typeOf[old]] and t ~= typeOf[old] then partnerOf[old], partnerOf[p.key] = p.key, old end -- Flip: the new form is the presser's partner
-		end
+		if old and not byKey[old] then storeSwapped(p, old, t, sameCount) end
 		swapped[p.key], left[p.key], esauJrForm[p.key] = nil, nil, nil -- back in play: resumes
-		if p.player.Parent and p.player:GetPlayerType() == PlayerType.PLAYER_ESAU then summoned[p.key] = true end
+		if p.player.Parent and t == PlayerType.PLAYER_ESAU then summoned[p.key] = true end
 		local controller = p.player.ControllerIndex
 		if not numberOf[p.key] then
 			numberOf[p.key], nextNumber = nextNumber, nextNumber + 1
@@ -207,31 +231,31 @@ function Roster.observe(players)
 		end
 		groupFor[controller] = groupFor[controller] or groupOf[p.key]
 		now[p.index] = p.key
-		if not p.ghost then settle(p) end -- a ghost learns once it is back
+		if not p.ghost then -- a ghost learns once it is back
+			typeOf[p.key] = t
+			settle(p.key, t)
+		end
 	end
-	local before, merged, lost = keyAt, {}, {} -- lost: members each group has fewer than at the last observe
+	local before, merged, lost, inBefore = keyAt, {}, {}, {} -- lost: members each group has fewer than at the last observe
 	keyAt, lastPlayers = now, #players
-	for _, key in pairs(before) do lost[groupOf[key]] = (lost[groupOf[key]] or 0) + 1 end
+	for _, key in pairs(before) do
+		lost[groupOf[key]], inBefore[key] = (lost[groupOf[key]] or 0) + 1, true
+	end
 	for _, p in ipairs(players) do lost[groupOf[p.key]] = (lost[groupOf[p.key]] or 0) - 1 end
 	for key in pairs(summoned) do
 		if not byKey[key] and not swapped[key] then forget(key) end -- also one saved but gone after a Continue
 	end
-	local inBefore = {}
-	for _, key in pairs(before) do inBefore[key] = true end
 	for _, old in pairs(before) do
-		if byKey[old] or swapped[old] or not numberOf[old] then goto nextOld end
-		-- shortcut: a Flip or Esau Jr. swap in the same update as another group's count change (a co-op leave, or a Clicker merge or split) is not seen as a swap, so the swapped-out form reads as left (items kept, hidden) until it plays again; compare counts per group if that gets reported.
-		local partner = partnerOf[old]
-		-- Birthright lost: Flip stores the other form again; or an Esau Jr. swap stored its twin with it (in play last update, stored this one), not a long-stored partner of a leaver
-		if byKey[partner] or (swapped[partner] and inBefore[partner]) then
+		local fate = numberOf[old] and not byKey[old] and not swapped[old] and vanished(old, byKey, players, inBefore, lost)
+		if fate == STORED then
 			swapped[old] = true
-			if typeOf[partner] == typeOf[old] then esauJrForm[old] = partner end -- Esau Jr. can take the other form's seed
-			goto nextOld
+			if typeOf[partnerOf[old]] == typeOf[old] then esauJrForm[old] = partnerOf[old] end -- Esau Jr. can take the other form's seed
+		elseif fate == LEFT then
+			Roster.markLeft(old) -- also catches a leaver without items
+		elseif fate then
+			merged[old] = fate
+			forget(old)
 		end
-		-- shortcut: a Strawman Keeper vanishing while its group plays on (unobserved; its ControllerIndex is unchecked) reads as a merge, so its owned items move to that character; give helpers their own leave rule if that gets reported.
-		merged[old] = (lost[groupOf[old]] or 0) > 0 and presentIn(players, groupOf[old]) or nil -- a group that kept its count swapped, so a co-op leave beside it stays a leave
-		if merged[old] then forget(old) else Roster.markLeft(old) end -- also catches a leaver without items
-		::nextOld::
 	end
 	resolveStored(byKey, merged)
 	return byKey, merged
