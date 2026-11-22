@@ -39,7 +39,7 @@ src = (repo/'scripts'/'tracker.lua').read_text(encoding='utf-8')
 # include re-runs the file, so every fresh tracker gets a fresh roster
 g = lua.globals(); g.REPO = str(repo)
 lua.execute('include = function(name) return dofile(REPO .. "/" .. name:gsub("%.", "/") .. ".lua") end')
-def fresh():  # a new run or a Continue: GetData starts empty (in-game 2026-11-22)
+def fresh():  # a new run or a Continue: GetData starts empty (after a Continue in-game 2026-11-22; after a new run unobserved)
     lua.execute('dataOf = {}'); return lua.execute(src)
 # ent: the entity, for GetData; set it apart for characters sharing a seed (Esau Jr. forms, a Birthright twin of one)
 def P(real={}, mod={}, variant=0, ghost=False, seed=None, ptype=0, ent=None):
