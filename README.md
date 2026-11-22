@@ -5,7 +5,7 @@ Adds a more customizable smaller version of the "Extra HUD", which displays the 
 
 ## What this fork changes
 - **Runs on Repentance+**. The original targets Afterbirth+.
-- **Settings through [Mod Config Menu Impure](https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951)** (Pure works too; do not enable both), saved in reHUD's own save.
+- **Settings through [Yet Another Mod Config Menu](https://steamcommunity.com/sharedfiles/filedetails/?id=3844329336)** ([Mod Config Menu Impure](https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951) and [Mod Config Menu Pure](https://steamcommunity.com/sharedfiles/filedetails/?id=2681875787) work too; enable only one), saved in reHUD's own save.
 - **Follows the HUD Offset option.**
 - **Shows as many items as fit on screen**, newest first, grouped by floor.
 - **Repentance floor names, in every game language**: Russian, Japanese, Korean and Chinese floor names no longer show up blank.
