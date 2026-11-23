@@ -10,7 +10,7 @@ for f in [repo/'main.lua', *sorted((repo/'scripts').glob('*.lua'))]:
     assert r is None, (f, r); print('syntax ok', f.name)
 lua.execute(r'''
 ItemType = { ITEM_PASSIVE = 1, ITEM_ACTIVE = 3, ITEM_FAMILIAR = 4 }
-PlayerType = { PLAYER_LAZARUS_B = 29, PLAYER_LAZARUS2_B = 38, PLAYER_ESAU = 20, PLAYER_THESOUL_B = 40 } -- checked in test_coop
+PlayerType = { PLAYER_LAZARUS_B = 29, PLAYER_LAZARUS2_B = 38, PLAYER_JACOB = 19, PLAYER_ESAU = 20, PLAYER_THESOUL_B = 40 } -- checked in test_coop
 local items = {}
 for i = 1, 20 do items[i] = { Type = 1, GfxFileName = "item" .. i } end
 Isaac = { GetItemConfig = function() return {

@@ -1,4 +1,4 @@
--- Who the playable characters are: a key per character, the 0-based number it got when first seen (kept for the run; a temporary character's only while present), the player group it belongs to,
+-- Who the playable characters are: a key per character, the 0-based number it got when first seen (kept for the run; a temporary character's only while present; shared by twins, told apart by their twin letter), the player group it belongs to,
 -- whether it is swapped out or left the run, and its innate item counts per player type. Roster.observe also returns the characters that merged into another of their group.
 local Roster = {}
 
@@ -44,6 +44,18 @@ local innateOf, typeOf, settleRemaining = {}, {}, {} -- innate copy counts by ke
 local esauJrForm = {} -- by stored key, the live character the stored one swapped places with through Esau Jr. (either way)
 local partnerOf = {} -- the other form by key, both ways, for Tainted Lazarus forms: the one record of which two forms are one Tainted Lazarus
 local summoned = {} -- keys of Soul of Jacob and Esau's Esaus
+-- Twins (CONTEXT.md Duo, Twin; user decisions 2026-11-23): the two characters of a duo share one character number and carry a twin letter, Jacob and Tainted Lazarus a, Esau and Dead Tainted Lazarus b.
+-- A newcomer joins as twin a character of its group playing the other type of its duo that holds its number alone: Esau beside Jacob (run start, Clicker into Jacob and Esau),
+-- a Dead form by Flip or Birthright beside its Tainted Lazarus. A Tainted Lazarus first seen alone reserves its number and letter for the Dead form's first Flip.
+-- An Esau Jr. character is a new character with its own number and no letter, also an Esau Jr. character of Tainted Lazarus: its observed Flip partners (the original's Dead form,
+-- a Dead Lazarus Jr.) are characters with their own numbers (in-game 2026-11-22); only a Flip that brings a new character (unobserved for an Esau Jr. character) makes it a duo.
+-- A merge (Clicker, ChangePlayerType) leaves the survivor alone with the plain number, and a later twin joins it again. The Forgotten and his Soul are one character, no duo.
+local twinLetter = {} -- "a" or "b" by key; nil for a character outside a duo, or merged out of one
+local DUO_TYPE = { [PlayerType.PLAYER_JACOB] = PlayerType.PLAYER_ESAU, [PlayerType.PLAYER_ESAU] = PlayerType.PLAYER_JACOB,
+	[PlayerType.PLAYER_LAZARUS_B] = PlayerType.PLAYER_LAZARUS2_B, [PlayerType.PLAYER_LAZARUS2_B] = PlayerType.PLAYER_LAZARUS_B }
+local function letterFor(playerType)
+	return (playerType == PlayerType.PLAYER_ESAU or playerType == PlayerType.PLAYER_LAZARUS2_B) and "b" or "a"
+end
 
 -- The GetPlayer index shifts when a co-op player leaves; the Sad Onion RNG seed stays the player's for the whole run, saves included (IsaacScript getPlayerIndex).
 -- shortcut: a mod calling Next() on that RNG changes the key only across a Continue (within a session the GetData tag below holds it), and that character's items then re-list under the current floor; switch to a sturdier key if that gets reported.
@@ -125,7 +137,7 @@ function Roster.reset()
 	left = {}
 	groupOf, groupFor, nextGroup = {}, {}, 0
 	innateOf, typeOf, settleRemaining = {}, {}, {}
-	partnerOf, esauJrForm = {}, {}
+	partnerOf, esauJrForm, twinLetter = {}, {}, {}
 end
 
 -- Registers a known character (from a save); a key already known keeps its number, and an out-of-range or taken number is refused.
@@ -133,13 +145,15 @@ end
 -- `row`: a validated saved row, fields as Roster.serialize writes them; key and number are integers of at least 0, swapped, left and summoned booleans, the rest may be nil.
 -- `innate`: parsed innate counts by player type, nil to re-learn. `type`: nil in saves before it was saved; a stored form's single Tainted Lazarus innate row stands in.
 -- `partner`: the other Tainted Lazarus form's key; `esauJr`: the substitute for an Esau Jr. original; `summoned`: a Soul of Jacob and Esau's Esau.
+-- `twin`: the twin letter, "a" or "b"; a number is shared only by two rows with different letters. Saves before twin letters have none: their twins keep the numbers
+-- they had and show no letter until the run ends; a twin first appearing after the Continue (a Dead form's first Flip, Clicker into Jacob and Esau) is numbered by the twin rules.
 function Roster.claim(row)
 	local key, number, group = row.key, row.number, row.group
 	if numberOf[key] or number > MAX_NUMBER then return end
-	for _, taken in pairs(numberOf) do
-		if taken == number then return end
+	for other, taken in pairs(numberOf) do
+		if taken == number and not (row.twin and twinLetter[other] and twinLetter[other] ~= row.twin) then return end
 	end
-	numberOf[key] = number
+	numberOf[key], twinLetter[key] = number, row.twin
 	if not row.summoned then nextNumber = math.max(nextNumber, number + 1) end -- a temporary character's number is free once he goes
 	swapped[key], left[key], innateOf[key] = row.swapped or nil, row.left or nil, row.innate
 	typeOf[key] = row.type or (row.swapped and savedLazarusType(row.innate)) or nil
@@ -181,9 +195,23 @@ local function settle(key, playerType)
 	innateOf[key][playerType], settleRemaining[key] = {}, SETTLE_UPDATES
 end
 
+-- Whether no other character holds `key`'s character number.
+local function alone(key)
+	for other, n in pairs(numberOf) do
+		if other ~= key and n == numberOf[key] then return false end
+	end
+	return true
+end
+
 -- Clears every record of `key` and its partner's link to it; esauJrForm links to it stay on purpose (absorber skips linked keys, an Esau Jr. return matches only keys in play, and a saved link is restored only for stored rows).
+-- A twin left alone by it (a merge) loses its letter.
 local function forget(key)
-	numberOf[key], groupOf[key], swapped[key], left[key] = nil, nil, nil, nil
+	local number = numberOf[key]
+	numberOf[key], twinLetter[key] = nil, nil
+	for other, n in pairs(numberOf) do
+		if n == number and alone(other) then twinLetter[other] = nil end
+	end
+	groupOf[key], swapped[key], left[key] = nil, nil, nil
 	innateOf[key], typeOf[key], settleRemaining[key] = nil, nil, nil
 	if partnerOf[key] then partnerOf[partnerOf[key]] = nil end
 	partnerOf[key], esauJrForm[key], summoned[key] = nil, nil, nil
@@ -272,6 +300,30 @@ local function numberFor(temporary)
 	return n
 end
 
+-- The character newcomer `p` (type `t`, group `group`) joins as twin, see twinLetter: `old` (the one it swapped with, a Flip) first, else one in play this update.
+local function twinFor(p, t, group, old, players)
+	local want = DUO_TYPE[t]
+	if not want or summoned[p.key] or esauJrPress(p.player, old) then return end
+	local function fits(key, keyType)
+		return key ~= p.key and numberOf[key] and not summoned[key] and keyType == want and groupOf[key] == group and alone(key)
+	end
+	if old and fits(old, typeOf[old]) then return old end
+	for _, q in ipairs(players) do
+		if fits(q.key, q.player:GetPlayerType()) then return q.key end
+	end
+end
+
+-- Numbers newcomer `p`: as a twin, or with a number of its own (a Tainted Lazarus not made by Esau Jr. reserving it for its Dead form).
+local function numberNewcomer(p, t, old, players)
+	local twin = twinFor(p, t, groupOf[p.key], old, players)
+	if twin then
+		numberOf[p.key], twinLetter[p.key], twinLetter[twin] = numberOf[twin], letterFor(t), letterFor(DUO_TYPE[t])
+		return
+	end
+	numberOf[p.key] = numberFor(summoned[p.key])
+	if TAINTED_LAZARUS[t] and not esauJrPress(p.player, old) then twinLetter[p.key] = letterFor(t) end
+end
+
 -- Sets `p.key` on each of `players` ({ index, player, ghost }), numbers newcomers and marks swaps; returns the players by key,
 -- and the keys of characters merged this update, each with the key it merged into.
 -- Must run every update: a swap is told from a leave by comparing with the previous update.
@@ -293,9 +345,9 @@ function Roster.observe(players)
 		if p.player.Parent and t == PlayerType.PLAYER_ESAU then summoned[p.key] = true end
 		local controller = p.player.ControllerIndex
 		if not numberOf[p.key] then
-			numberOf[p.key] = numberFor(summoned[p.key])
 			groupOf[p.key] = groupFor[controller] or nextGroup
 			if groupOf[p.key] == nextGroup then nextGroup = nextGroup + 1 end
+			numberNewcomer(p, t, old, players)
 		end
 		groupFor[controller] = groupFor[controller] or groupOf[p.key]
 		now[p.index] = p.key
@@ -331,6 +383,10 @@ end
 
 function Roster.number(key)
 	return numberOf[key]
+end
+
+function Roster.letter(key)
+	return twinLetter[key]
 end
 
 function Roster.group(key)
@@ -389,7 +445,7 @@ end
 function Roster.serialize()
 	local rows = {}
 	for key, number in pairs(numberOf) do
-		table.insert(rows, { key = key, number = number, group = groupOf[key], swapped = swapped[key] == true, left = left[key] == true, innate = innateRows(key), type = typeOf[key], partner = partnerOf[key], esauJr = esauJrForm[key], summoned = summoned[key] })
+		table.insert(rows, { key = key, number = number, group = groupOf[key], swapped = swapped[key] == true, left = left[key] == true, innate = innateRows(key), type = typeOf[key], partner = partnerOf[key], esauJr = esauJrForm[key], summoned = summoned[key], twin = twinLetter[key] })
 	end
 	return rows
 end

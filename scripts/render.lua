@@ -99,7 +99,7 @@ local function shown(config, entry)
 	return config[TYPE_FILTER[entry.type]] and (config.showTemporary or not entry.temporary) and (config.showLeft or not entry.left)
 end
 
--- Newest item first, badged with the character number once a second character is known (a solo run looks as before).
+-- Newest item first, badged with the character number and twin letter (1a) once a second character is known (a solo run looks as before).
 local function drawItems(config, entries, characterCount, screen, hudPad)
 	local size = 32 * config.spriteScale
 	local limit = maxDisplay(config, screen, hudPad, size)
@@ -133,7 +133,7 @@ local function drawItems(config, entries, characterCount, screen, hudPad)
 		if entry.temporary then drawClock(pos, color, scale) end
 		if badges then
 			local corner = pos + ITEM_TOP_LEFT * scale.X
-			fontFloorName:DrawStringScaled(tostring(entry.number + 1), corner.X, corner.Y, scale.X, scale.Y, textColor, 0, false)
+			fontFloorName:DrawStringScaled(tostring(entry.number + 1) .. (entry.letter or ""), corner.X, corner.Y, scale.X, scale.Y, textColor, 0, false)
 		end
 		slot = slot + 1
 		if slot >= limit then return end

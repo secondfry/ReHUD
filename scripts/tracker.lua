@@ -1,6 +1,6 @@
--- Collected item copies per character, oldest first. Each entry: { id, owner, number, left, floor, type, temporary } is one copy: two copies of an item
+-- Collected item copies per character, oldest first. Each entry: { id, owner, number, letter, left, floor, type, temporary } is one copy: two copies of an item
 -- (owned twice, owned plus innate, owned plus a wisp) are two entries, and the same item held by two characters is two entries too.
--- `owner` is the character's key and `number` its character number (see roster.lua); `left` marks the items of a player who left the run.
+-- `owner` is the character's key, `number` its character number and `letter` its twin letter or nil (see roster.lua); `left` marks the items of a player who left the run.
 -- `merged` marks a copy without a clock held through a merge, by either character, kept unmatched while the survivor settles (not saved).
 -- At the last update: characterCount counts present players and swapped-out characters with a list, leftCount players who left with a list.
 local Tracker = { entries = {}, characterCount = 0, leftCount = 0 }
@@ -20,14 +20,14 @@ local hashOf, inherited = {}, {} -- GetPtrHash by key, of the players passed thi
 local function add(id, owner, floor, temporary)
 	local item = itemConfig:GetCollectible(id)
 	if not item then return end
-	local entry = { id = id, owner = owner, number = owner and roster.number(owner) or 0, floor = floor, type = item.Type, temporary = temporary }
+	local entry = { id = id, owner = owner, number = owner and roster.number(owner) or 0, letter = owner and roster.letter(owner), floor = floor, type = item.Type, temporary = temporary }
 	table.insert(Tracker.entries, entry)
 	ordered = nil
 	return entry
 end
 
 local function reassign(entry, key)
-	entry.owner, entry.number, ordered = key, roster.number(key), nil
+	entry.owner, entry.number, entry.letter, ordered = key, roster.number(key), roster.letter(key), nil
 end
 
 -- A living character still learning its innate items.
@@ -128,7 +128,7 @@ function Tracker.reset()
 	roster.reset()
 end
 
--- Rebuild from the saved parallel arrays and roster rows ({ key, number, group, swapped, left, innate = { { type, ids } }, type, partner, esauJr, summoned }); entries whose item no longer exists are dropped.
+-- Rebuild from the saved parallel arrays and roster rows ({ key, number, group, swapped, left, innate = { { type, ids } }, type, partner, esauJr, summoned, twin }); entries whose item no longer exists are dropped.
 -- An owner that is missing (saves from before co-op tracking), malformed or without a valid roster row is left unset
 -- and goes to whoever is living player 0 on a later update; until then the items show as character 1.
 -- A missing `temporary` (saves before 2.8) leaves the kind unknown: the first update fills copies without a clock first.
@@ -140,7 +140,8 @@ function Tracker.restore(ids, floors, owners, rows, temporaries)
 			local key, number = savedInteger(row.key), savedInteger(row.number)
 			if key and number then
 				roster.claim({ key = key, number = number, swapped = row.swapped == true, left = row.left == true, group = savedInteger(row.group), innate = savedInnate(row.innate),
-					type = savedInteger(row.type), partner = savedInteger(row.partner), esauJr = savedInteger(row.esauJr), summoned = row.summoned == true })
+					type = savedInteger(row.type), partner = savedInteger(row.partner), esauJr = savedInteger(row.esauJr), summoned = row.summoned == true,
+					twin = (row.twin == "a" or row.twin == "b") and row.twin or nil })
 			end
 			::nextRow::
 		end
@@ -192,7 +193,7 @@ function Tracker.update(players)
 	end
 	hashOf = {}
 	for _, p in ipairs(players) do
-		free[p.key], known[roster.number(p.key)], hashOf[p.key] = {}, true, GetPtrHash(p.player)
+		free[p.key], known[p.key], hashOf[p.key] = {}, true, GetPtrHash(p.player)
 		if p.index == 0 and not p.ghost then firstKey = p.key end
 	end
 	local wisps = Isaac.FindByType(EntityType.ENTITY_FAMILIAR, FamiliarVariant.ITEM_WISP)
@@ -220,14 +221,16 @@ function Tracker.update(players)
 		if into and not entry.temporary then reassign(entry, into) end
 		if survivors[entry.owner] and not entry.temporary then entry.merged = true end
 		if not roster.number(entry.owner) then return true end -- a merged character's clocked copies, a stored Tainted Lazarus form merged away, or a summoned Esau who left
+		local letter = roster.letter(entry.owner) -- a merge or a joining twin changes it
+		if entry.letter ~= letter then entry.letter, ordered = letter, nil end
 		local p = byKey[entry.owner]
 		if not p and roster.isSwapped(entry.owner) then
-			known[entry.number], entry.merged = true, nil
+			known[entry.owner], entry.merged = true, nil
 			return
 		end
 		if not p then
 			roster.markLeft(entry.owner)
-			entry.left, gone[entry.number] = true, true
+			entry.left, gone[entry.owner] = true, true
 			return
 		end
 		entry.left = nil -- back in the run
@@ -280,7 +283,7 @@ function Tracker.update(players)
 end
 
 -- Entries in the order the HUD lists them, oldest first like `entries` (the HUD reads backwards): floors as collected, and within each run of one floor,
--- read newest first, by player group, then character number, then newest item. Cached, since it is drawn every frame.
+-- read newest first, by player group, then character number and twin letter, then newest item. Cached, since it is drawn every frame.
 function Tracker.ordered()
 	if ordered then return ordered end
 	local entries, position = Tracker.entries, {}
@@ -290,15 +293,16 @@ function Tracker.ordered()
 		if i > 1 and entry.floor ~= entries[i - 1].floor then floorStart = i end
 		first[entry] = floorStart
 	end
-	local function rank(entry) return roster.group(entry.owner) or 0, entry.number end
+	local function rank(entry) return roster.group(entry.owner) or 0, entry.number, entry.letter or "" end
 	ordered = {}
 	for i, entry in ipairs(entries) do ordered[i] = entry end
 	table.sort(ordered, function(a, b)
 		if first[a] ~= first[b] then return first[a] < first[b] end
-		local groupA, numberA = rank(a)
-		local groupB, numberB = rank(b)
+		local groupA, numberA, letterA = rank(a)
+		local groupB, numberB, letterB = rank(b)
 		if groupA ~= groupB then return groupA > groupB end -- reversed: the HUD reads from the end
 		if numberA ~= numberB then return numberA > numberB end
+		if letterA ~= letterB then return letterA > letterB end
 		return position[a] < position[b]
 	end)
 	return ordered

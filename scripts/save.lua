@@ -1,5 +1,5 @@
--- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { character keys }, temporary = { booleans, 0 for unknown }, roster = { { key, number, group, swapped, left, innate = { { type, ids } }, type, partner, esauJr, summoned } } };
--- earlier versions wrote neither owner nor roster, older saves have no innate, and saves before 2.8 no temporary, type, partner, esauJr or summoned.
+-- Mod save file: { config = {...}, items = { ids }, floor = { names }, owner = { character keys }, temporary = { booleans, 0 for unknown }, roster = { { key, number, group, swapped, left, innate = { { type, ids } }, type, partner, esauJr, summoned, twin } } };
+-- earlier versions wrote neither owner nor roster, older saves have no innate, saves before 2.8 no temporary, type, partner, esauJr or summoned, and saves before twin letters no twin.
 local json = require("json")
 
 local Save = {}
