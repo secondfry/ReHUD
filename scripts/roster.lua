@@ -1,4 +1,4 @@
--- Who the playable characters are: a key per character, the 0-based number it got when first seen (kept for the run), the player group it belongs to,
+-- Who the playable characters are: a key per character, the 0-based number it got when first seen (kept for the run; a temporary character's only while present), the player group it belongs to,
 -- whether it is swapped out or left the run, and its innate item counts per player type. Roster.observe also returns the characters that merged into another of their group.
 local Roster = {}
 
@@ -20,7 +20,8 @@ local groupOf, groupFor, nextGroup = {}, {}, 0
 -- Clicker and ChangePlayerType out of Tainted Lazarus, or into the stored form's own type, gave the partner both forms' items, and the old form never returns (in-game 2026-11-21).
 -- An Esau Jr. swap links the stored character with the live one it swapped with (esauJrForm, both ways): the stored one never merges, and stays listed until the run ends (user decision 2026-11-22):
 -- each Esau Jr. copy keeps the character it last swapped out, wherever the copy lies, and the engine never frees one of its four slots (in-game 2026-11-22), so a count of 0 or a lost copy says nothing.
--- Soul of Jacob and Esau's Esau (type 20 with a Parent) is temporary: once he is not passed, he is forgotten with his items (user decision 2026-11-22).
+-- Soul of Jacob and Esau's Esau (type 20 with a Parent) is a temporary character: once he is not passed, he is forgotten with his items (user decision 2026-11-22),
+-- and his character number is free again (CONTEXT.md: a temporary character has one only while present).
 local swapped, keyAt, lastPlayers = {}, {}, 0 -- swapped-out keys; key by GetPlayer index and player count at the last observe
 local left = {} -- keys of players who left the run; their items stay, hidden unless the menu shows them
 local TAINTED_LAZARUS = { [PlayerType.PLAYER_LAZARUS_B] = true, [PlayerType.PLAYER_LAZARUS2_B] = true }
@@ -52,16 +53,22 @@ local summoned = {} -- keys of Soul of Jacob and Esau's Esaus
 -- one whose seed is already tagged this session is another character and takes the seed plus a multiple of SEED_SPAN (seeds are 32-bit), so a saved key still names its seed.
 -- Whether a tag stays with its character through a Tainted Lazarus Flip, or with each Birthright twin apart, is unobserved; the same-seed Flip and twin cases rely on it.
 -- The tag holds a token renewed by Roster.reset, so a tag from an earlier run or session never counts (whether one survives a new run is unobserved).
--- Exit & Continue wipes GetData (in-game 2026-11-22), so after a Continue the first character playing on a seed takes the key saved as live (not stored, not left) on it,
+-- Exit & Continue wipes GetData (in-game 2026-11-22), and every character comes back with its own items (in-game 2026-11-22), so after a Continue a character takes the saved key
+-- on its seed whose owned items at the save equal its GetCollectibleNum(id, true) counts: the only such key, else the only one of those saved with its player type (user decision 2026-11-23).
+-- Failing that, the first character playing on a seed takes the key saved as live (not stored, not left) on it,
 -- keeping its character N (user decision 2026-11-22): the game brings back the character playing at the save.
 -- A saved stored key not yet handed out waits for its own character: a fresh Esau Jr. form on its seed (a newcomer holding Esau Jr. in its presser's place) is a new character
 -- with a new character N, unless the key's saved Esau Jr. link is that presser (user decision 2026-11-22); a Flip or any other arrival may take it.
 -- ReHUD saves only on exit (MC_PRE_GAME_EXIT), so after a crash the character numbers are those of the last exit; what the game restores after a crash is unobserved.
--- shortcut: the stored ones take the seed's remaining keys in the order they play, with no RNG or item matching (never put to the user), and two live ones on a seed (a Birthright twin of an Esau Jr. form) take its live keys in that order, so two stored ones, or two live ones, may swap character numbers: once each has played, its list holds its own copies under the current floor, but the numbers stay swapped; match by items if that gets reported.
--- shortcut: after a Continue in a run juggling two Esau Jr. copies, a character returning through a copy whose saved link names another character gets a new character N while its old one stays listed; track the copy each character came through if that gets reported.
+-- shortcut: matching leaves the rule above to decide for characters on one seed with identical owned items and type, items changed shortly before exit (the save holds the last scan),
+-- and a returning character whose items are not yet in place on its first update (unobserved, pending an in-game check); two characters may then swap character numbers,
+-- or one returning through an Esau Jr. copy whose saved link names another gets a new character N; check the items' timing in game if that gets reported.
 local SEED_SPAN = 1 << 32
 local session, tagged = {}, {} -- this session's tag token; keys handed out this session
 local liveAtSave = {} -- by seed, the keys of the saved rows that were live at the save
+local ownedAtSave = {} -- by saved key, its owned item counts by id at the save (Roster.remember)
+local itemConfig = Isaac.GetItemConfig()
+local maxCollectibleID = itemConfig:GetCollectibles().Size - 1 -- includes modded items
 
 local function holdsEsauJr(player)
 	return player:GetCollectibleNum(CollectibleType.COLLECTIBLE_ESAU_JR, true) > 0
@@ -72,24 +79,47 @@ local function esauJrPress(player, old)
 	return player:GetPlayerType() == typeOf[old] and holdsEsauJr(player)
 end
 
+local function ownsExactly(player, counts)
+	for id = 1, maxCollectibleID do
+		if itemConfig:GetCollectible(id) and player:GetCollectibleNum(id, true) ~= (counts[id] or 0) then return false end
+	end
+	return true
+end
+
+-- The saved key on `seed`, not yet handed out, whose owned items at the save equal the player's: the only one, else the only one of those saved with the player's type.
+local function matchByItems(player, seed)
+	local equal, sameType = {}, {}
+	for key, counts in pairs(ownedAtSave) do
+		if key % SEED_SPAN == seed and not tagged[key] and ownsExactly(player, counts) then
+			table.insert(equal, key)
+			if typeOf[key] == player:GetPlayerType() then table.insert(sameType, key) end
+		end
+	end
+	if #equal == 1 then return equal[1] end
+	if #sameType == 1 then return sameType[1] end
+end
+
 -- `old`: the key at the player's GetPlayer index last update, the one a swap replaces.
 local function playerKey(player, old)
 	local seed, data = player:GetCollectibleRNG(1):GetSeed(), player:GetData()
 	if type(data) ~= "table" then return seed end -- after a Mods-menu Lua reset GetData returns a number until restart
 	local tag = data.ReHUD_key
 	if tag and tag.session == session then return tag.key end
-	local key = seed
-	for _, live in ipairs(liveAtSave[seed] or {}) do
-		if not tagged[live] then key = live break end
+	local key = matchByItems(player, seed)
+	if not key then
+		key = seed
+		for _, live in ipairs(liveAtSave[seed] or {}) do
+			if not tagged[live] then key = live break end
+		end
+		local fresh = esauJrPress(player, old)
+		while tagged[key] or (fresh and swapped[key] and esauJrForm[key] ~= old) do key = key + SEED_SPAN end -- an untagged swapped key is a saved stored one
 	end
-	local fresh = esauJrPress(player, old)
-	while tagged[key] or (fresh and swapped[key] and esauJrForm[key] ~= old) do key = key + SEED_SPAN end -- an untagged swapped key is a saved stored one
 	tagged[key], data.ReHUD_key = true, { session = session, key = key }
 	return key
 end
 
 function Roster.reset()
-	session, tagged, summoned, liveAtSave = {}, {}, {}, {}
+	session, tagged, summoned, liveAtSave, ownedAtSave = {}, {}, {}, {}, {}
 	numberOf, nextNumber = {}, 0
 	swapped, keyAt, lastPlayers = {}, {}, 0
 	left = {}
@@ -109,7 +139,8 @@ function Roster.claim(row)
 	for _, taken in pairs(numberOf) do
 		if taken == number then return end
 	end
-	numberOf[key], nextNumber = number, math.max(nextNumber, number + 1)
+	numberOf[key] = number
+	if not row.summoned then nextNumber = math.max(nextNumber, number + 1) end -- a temporary character's number is free once he goes
 	swapped[key], left[key], innateOf[key] = row.swapped or nil, row.left or nil, row.innate
 	typeOf[key] = row.type or (row.swapped and savedLazarusType(row.innate)) or nil
 	partnerOf[key], esauJrForm[key], summoned[key] = row.partner, row.swapped and row.esauJr or nil, row.summoned or nil
@@ -124,6 +155,22 @@ function Roster.claim(row)
 		group = MAX_NUMBER + 1 + number
 	end
 	groupOf[key] = group
+end
+
+-- Records each claimed character's owned item counts at the save, for matching after a Continue: its copies without a clock minus its innate ones for its saved type.
+-- `unclocked`: copies without a clock by key, then id; false for a character holding a copy of unknown kind (saves before 2.8). That one gets no counts,
+-- and neither does one without innate counts for its saved type (saved while settling, or saves without type or innate).
+function Roster.remember(unclocked)
+	for key in pairs(numberOf) do
+		local innate = innateOf[key] and typeOf[key] and innateOf[key][typeOf[key]]
+		if unclocked[key] ~= false and innate then
+			local counts = {}
+			for id, n in pairs(unclocked[key] or {}) do
+				if n > (innate[id] or 0) then counts[id] = n - (innate[id] or 0) end
+			end
+			ownedAtSave[key] = counts
+		end
+	end
 end
 
 -- Counts down the settle window and starts one when the character appears as a player type it has no innate counts for.
@@ -215,6 +262,16 @@ local function storeSwapped(p, old, t, sameCount)
 	if not numberOf[p.key] and not partnerOf[old] and TAINTED_LAZARUS[t] and TAINTED_LAZARUS[typeOf[old]] and t ~= typeOf[old] then partnerOf[old], partnerOf[p.key] = p.key, old end -- Flip: the new form is the presser's partner
 end
 
+-- A new character's number: a temporary character takes the lowest number nobody holds now; any other the next number, skipping those temporary characters hold.
+local function numberFor(temporary)
+	local held = {}
+	for _, n in pairs(numberOf) do held[n] = true end
+	local n = temporary and 0 or nextNumber
+	while held[n] do n = n + 1 end
+	if not temporary then nextNumber = n + 1 end
+	return n
+end
+
 -- Sets `p.key` on each of `players` ({ index, player, ghost }), numbers newcomers and marks swaps; returns the players by key,
 -- and the keys of characters merged this update, each with the key it merged into.
 -- Must run every update: a swap is told from a leave by comparing with the previous update.
@@ -236,7 +293,7 @@ function Roster.observe(players)
 		if p.player.Parent and t == PlayerType.PLAYER_ESAU then summoned[p.key] = true end
 		local controller = p.player.ControllerIndex
 		if not numberOf[p.key] then
-			numberOf[p.key], nextNumber = nextNumber, nextNumber + 1
+			numberOf[p.key] = numberFor(summoned[p.key])
 			groupOf[p.key] = groupFor[controller] or nextGroup
 			if groupOf[p.key] == nextGroup then nextGroup = nextGroup + 1 end
 		end

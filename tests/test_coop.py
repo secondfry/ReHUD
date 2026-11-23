@@ -810,9 +810,16 @@ replay(T, '... kept across a continue while present', (I0, 0, False, (1,)), (SE,
 play(T, form(I0, 0, 1))
 replay(T, '... he leaves: row and items gone, none moved to Isaac', (I0, 0, False, (1,)), label='')
 play(T, form(I0, 0, 1), summon(SE2, 4))
-replay(T, '... summoned again (new seed): a new row', (I0, 0, False, (1,)), (SE2, 2, False, (4,)), label='')
+replay(T, '... summoned again (new seed): a new row, character 2 again (a temporary character has a number only while present)', (I0, 0, False, (1,)), (SE2, 1, False, (4,)), label='')
 T = roundtrip(T); play(T, form(I0, 0, 1))
 replay(T, '... saved but absent after a continue: forgotten', (I0, 0, False, (1,)), label='')
+P2 = 930
+p2join = lambda: P({9:1}, seed=P2, ctrl=1)
+T = fresh(); play(T, form(I0, 0, 1), summon(SE, 2, 3)); play(T, form(I0, 0, 1)); play(T, form(I0, 0, 1), p2join())
+replay(T, 'player 2 joining after the temporary Esau left is character 2', (I0, 0, False, (1,)), (P2, 1, False, (9,)), label='')
+T = fresh(); play(T, form(I0, 0, 1), summon(SE, 2, 3)); play(T, form(I0, 0, 1), summon(SE, 2, 3), p2join())
+play(T, form(I0, 0, 1), p2join()); play(T, form(I0, 0, 1), p2join(), summon(SE2, 4))
+replay(T, 'player 2 joining beside the temporary Esau is character 3; the next temporary Esau takes the free 2', (I0, 0, False, (1,)), (P2, 2, False, (9,)), (SE2, 1, False, (4,)), label='')
 
 # Not observed in game: guards for the design.
 T = esau_setup()
@@ -875,4 +882,37 @@ play(T, form(C, 29, 1, BR, EJ), form(D, 38, 2))  # F2 presses copy 1: C and D re
 replay(T, 'Birthright pair returns by Esau Jr.: F2 stored, not left', (C, 0, False, (1, BR, EJ)), (D, 1, False, (2,)), (DJ, 2, True, (3, EJ)), (F2, 3, True, (6, EJ)), label='')
 play(T, form(F2, 29, 6, EJ))  # C presses copy 1: F2 returns, the count drops
 replay(T, '... and F2 returns: C and D stored with their items, nothing merged', (C, 0, True, (1, BR, EJ)), (D, 1, True, (2,)), (DJ, 2, True, (3, EJ)), (F2, 3, False, (6, EJ)), label='')
+
+# Item matching after a Continue (GetData wiped): a returning character takes the saved key on its seed whose owned items equal its own (user decision 2026-11-23)
+def g9(T):  # Isaac presses copy 1 -> A; A drops copy 1 and presses copy 2 -> B; saved with B playing
+    play(T, form(I0, 0, 1, EJ)); play(T, form(IA, 0, 2, EJ)); play(T, form(IA, 0, 2)); play(T, form(IA, 0, 2, EJ)); play(T, form(IB, 0, 3, EJ))
+T = fresh(); g9(T); T = roundtrip(T); play(T, form(IB, 0, 3, EJ))
+play(T, form(I0, 0, 1, EJ))  # B picks up copy 1 and presses: Isaac returns
+replay(T, 'G9: Isaac returning through copy 1 after a continue keeps character 1', (I0, 0, False, (1, EJ)), (IA, 1, True, (2, EJ)), (IB, 2, True, (3, EJ)), label='')
+T = fresh(); g9(T); ids, floors, owners_, rws, _ = T.serialize(); T = fresh(); T.restore(ids, floors, owners_, rws, None)
+play(T, form(IB, 0, 3, EJ)); play(T, form(I0, 0, 1, EJ))
+check('pre-2.8 save (no item kinds): no matching, Isaac returns as a new character 4 as before', sorted(r[:2] for r in rows(T)) == [(I0, 0), (IA, 1), (IB, 2), (I0 + 2**32, 3)], rows(T))
+DLJ = 806
+T = fresh()
+play(T, form(A, 29, 4, FL, EJ)); play(T, form(B, 38, 5, FL, EJ))  # Flip: Dead Lazarus, character 2
+play(T, form(A, 29, 4, FL, EJ)); play(T, form(B, 29, 6, FL, EJ, ent='LJ'))  # A presses Esau Jr.: Lazarus Jr. on B's seed, character 3
+play(T, form(B, 38, 5, FL, EJ))  # Lazarus Jr. flips to Dead Lazarus
+play(T, form(DLJ, 38, 7, FL, EJ))  # Dead Lazarus presses Esau Jr.: Dead Lazarus Jr., character 4
+T = roundtrip(T); play(T, form(DLJ, 38, 7, FL, EJ))
+play(T, form(B, 29, 6, FL, EJ, ent='LJ'))  # Dead Lazarus Jr. flips to Lazarus Jr.
+replay(T, 'G7: Lazarus Jr. back after a continue stays character 3', (A, 0, True, (4, FL, EJ)), (B, 1, True, (5, FL, EJ)), (LJ, 2, False, (6, FL, EJ)), (DLJ, 3, True, (7, FL, EJ)), label='')
+play(T, form(B, 38, 5, FL, EJ))
+replay(T, '... then Dead Lazarus stays character 2 and keeps c5', (A, 0, True, (4, FL, EJ)), (B, 1, False, (5, FL, EJ)), (LJ, 2, True, (6, FL, EJ)), (DLJ, 3, True, (7, FL, EJ)), label='')
+T = esau_setup(); play(T, form(B, 29, *esau, BR), form(B, 38, FL, ent='twin'))
+T = roundtrip(T); play(T, form(B, 38, FL, ent='twin'), form(B, 29, *esau, BR))
+replay(T, 'two live characters on one seed, GetPlayer indices swapped after a continue: both keep their numbers', (A, 0, True, original), (B, 1, False, (*esau, BR)), (BJ, 2, False, (FL,)), label='')
+# A and C on A's seed with identical items and type: matching cannot tell them apart, so the character live at the save (C) keeps its key; A then matches the one left
+T = fresh()
+play(T, form(I0, 0, 1, EJ)); play(T, form(IA, 0, EJ))  # Isaac presses copy 1 -> A
+play(T, form(IB, 0, 3, EJ)); play(T, form(I0, 0, 1, EJ))  # A presses copy 2 -> B; B presses copy 1 -> Isaac
+play(T, form(IA, 0, EJ, ent='C'))  # Isaac presses a fresh copy 3 -> C on A's seed
+T = roundtrip(T); play(T, form(IA, 0, EJ, ent='C'))
+replay(T, 'identical items and type: falls back to the rule before matching, C live at the save keeps character 4', (I0, 0, True, (1, EJ)), (IA, 1, True, (EJ,)), (IB, 2, True, (3, EJ)), (IC, 3, False, (EJ,)), label='')
+play(T, form(IA, 0, EJ))  # C presses copy 2: A returns
+replay(T, '... A returning through copy 2 keeps character 2', (I0, 0, True, (1, EJ)), (IA, 1, False, (EJ,)), (IB, 2, True, (3, EJ)), (IC, 3, True, (EJ,)), label='')
 assert not failed, failed

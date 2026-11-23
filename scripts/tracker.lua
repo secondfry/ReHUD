@@ -158,6 +158,16 @@ function Tracker.restore(ids, floors, owners, rows, temporaries)
 		if entry then entry.left = roster.isLeft(owner) or nil end
 		::continue::
 	end
+	-- Each character's copies without a clock, so the roster can match characters sharing a seed by their items; false once a copy's kind is unknown.
+	local unclocked = {}
+	for _, entry in ipairs(Tracker.entries) do
+		local key = entry.owner
+		if key and unclocked[key] ~= false and entry.temporary ~= true then
+			unclocked[key] = entry.temporary == false and (unclocked[key] or {}) or false
+			if unclocked[key] then unclocked[key][entry.id] = (unclocked[key][entry.id] or 0) + 1 end
+		end
+	end
+	roster.remember(unclocked)
 end
 
 function Tracker.serialize()
