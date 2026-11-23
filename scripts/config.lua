@@ -8,7 +8,7 @@ return {
 	transparency = 0.5,
 	showPassive = true,
 	showFamiliar = true,
-	showTemporary = true, -- items only granted by modifiers (wisps, Zodiac, 3 Dollar Bill); a character's innate items excepted
+	showTemporary = true, -- copies granted by modifiers (wisps, Zodiac, 3 Dollar Bill), each its own icon; a character's innate copies excepted
 	showActive = false,
 	showTimer = true,
 	showItems = true,

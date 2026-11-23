@@ -10,14 +10,17 @@ local mcm = include("scripts.mcm")
 
 local gameStarted = false
 
+-- Read-only access for the in-game test harness (isaac-test-harness); nothing in ReHUD reads it.
+ReHUD.dbg = { tracker = tracker, config = config, roster = tracker.roster }
+
 function ReHUD:isActive()
 	return not config.disable
 end
 
 ReHUD:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function(_, isContinued)
 	mcm.register(config)
-	local ids, floors, owners, rows = save.read(ReHUD, config)
-	if isContinued then tracker.restore(ids, floors, owners, rows) else tracker.reset() end
+	local ids, floors, owners, rows, temporaries = save.read(ReHUD, config)
+	if isContinued then tracker.restore(ids, floors, owners, rows, temporaries) else tracker.reset() end
 	gameStarted = true
 end)
 
@@ -26,11 +29,10 @@ ReHUD:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
 	gameStarted = false
 end)
 
--- Playable characters only: co-op babies (variant 1; vanilla has no PlayerVariant enum), helpers with a Parent (Strawman Keeper; IsaacScript isChildPlayer)
--- and the Tainted Soul (own seed, same character as Tainted Forgotten, so a solo run counts one) get no number or badge.
+-- Playable characters only: co-op babies (variant 1; vanilla has no PlayerVariant enum) and the Tainted Soul (own seed, same character as Tainted Forgotten,
+-- so a solo run counts one) get no number or badge. Strawman's Keeper and Soul of Jacob and Esau's Esau, both with a Parent, are characters (user decision 2026-11-22).
 local function isCharacter(player)
 	if player.Variant ~= 0 then return false end
-	if player.Parent then return false end
 	return player:GetPlayerType() ~= PlayerType.PLAYER_THESOUL_B
 end
 

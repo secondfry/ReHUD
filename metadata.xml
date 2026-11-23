@@ -9,13 +9,17 @@ Adds a more customizable smaller version of the &quot;Extra HUD&quot;, which dis
 
 [h1]What this fork changes[/h1]
 - [b]Runs on Repentance+[/b]. The original targets Afterbirth+.
-- [b]Settings through [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]Mod Config Menu Impure[/url][/b] (Pure works too; do not enable both), saved in reHUD's own save.
+- [b]Settings through [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3844329336]Yet Another Mod Config Menu[/url][/b] ([url=https://steamcommunity.com/sharedfiles/filedetails/?id=3701683951]Mod Config Menu Impure[/url] and [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2681875787]Mod Config Menu Pure[/url] work too; enable only one), saved in reHUD's own save.
 - [b]Follows the HUD Offset option.[/b]
 - [b]Shows as many items as fit on screen[/b], newest first, grouped by floor.
 - [b]Repentance floor names, in every game language[/b]: Russian, Japanese, Korean and Chinese floor names no longer show up blank.
 - [b]New filters[/b]: active items, and temporary items (Lemegeton wisps, Zodiac, 3 Dollar Bill), which are marked with a small clock.
+- [b]One icon per copy[/b]: an item held twice (picked up twice, owned plus a character's innate copy like Cain's Lucky Foot, owned plus a Lemegeton wisp) shows twice. Each wisp, Zodiac or 3 Dollar Bill copy gets its own clock; when a copy goes, the oldest icon of that kind leaves.
 - [b]Timer[/b] shows hundredths of a second.
-- [b]Co-op and Jacob and Esau[/b]: lists every character's items, grouped by player within each floor and each marked with a character number when there is more than one (Esau, each Tainted Lazarus form and an Esau Jr. form get their own). A dead player's items stay listed; items of players who leave stay hidden unless [b]Show items of players who left[/b] is on.
+- [b]Co-op and Jacob and Esau[/b]: lists every character's items, grouped by player within each floor and marked with a character number when there is more than one; Jacob and Esau share one number as 1a and 1b, and so do Tainted Lazarus and Dead Tainted Lazarus. Items of players who leave stay hidden unless [b]Show items of players who left[/b] is on.
+
+[h1]Unfixable in vanilla[/h1]
+- Esau Jr.: after Exit and Continue, characters it stored may swap or change character numbers.
 
 [h1]Features of original[/h1]
 - [b]Display your last collected items on the screen[/b]. over 100 of them instead of the last 10 in the normal game.
@@ -32,7 +36,7 @@ to wofsauge for the original reHUD!
 to Piber for the Mod config menu!
 to Skojanza for helping bugfix the original mod
 to _Kilburn for the screen-size helper in the original mod</description>
-    <version>2.7</version>
+    <version>2.8</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Items"/>
