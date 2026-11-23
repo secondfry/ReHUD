@@ -12,7 +12,7 @@ Adds a more customizable smaller version of the "Extra HUD", which displays the 
 - **New filters**: active items, and temporary items (Lemegeton wisps, Zodiac, 3 Dollar Bill), which are marked with a small clock.
 - **One icon per copy**: an item held twice (picked up twice, owned plus a character's innate copy like Cain's Lucky Foot, owned plus a Lemegeton wisp) shows twice. Each wisp, Zodiac or 3 Dollar Bill copy gets its own clock; when a copy goes, the oldest icon of that kind leaves.
 - **Timer** shows hundredths of a second.
-- **Co-op and Jacob and Esau**: lists every character's items, grouped by player within each floor and marked with a character number when there is more than one. Items of players who leave stay hidden unless **Show items of players who left** is on.
+- **Co-op and Jacob and Esau**: lists every character's items, grouped by player within each floor and marked with a character number when there is more than one; Jacob and Esau share one number as 1a and 1b, and so do Tainted Lazarus and Dead Tainted Lazarus. Items of players who leave stay hidden unless **Show items of players who left** is on.
 
 ## Unfixable in vanilla
 - Esau Jr.: after Exit and Continue, two stored characters with the same items may swap character numbers.

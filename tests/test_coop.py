@@ -84,10 +84,10 @@ g.floorName = 'B2'
 run(T, L((0, P({2:1}, seed=38, ptype=38))))
 assert entries(T) == [(1,0,'B1',False),(2,0,'B2',False)] and badges(T) == [(1,'1a'),(2,'1b')] and T.characterCount == 2; ok('solo Lazarus Flip: forms 1a and 1b, both listed, floors kept')
 run(T, L((0, P({1:1}, seed=29, ptype=29))))
-assert badges(T) == [(1,'1a'),(2,'1b')] and T.characterCount == 2; ok('solo Lazarus flip back: re-matched, numbers stable, no duplicates')
+assert listed(T) == [(1,'1a','B1',False),(2,'1b','B2',False)] and T.characterCount == 2; ok('solo Lazarus flip back: re-matched, numbers stable, no duplicates')
 T2 = fresh(); T2.restore(*T.serialize())
 run(T2, L((0, P({1:1}, seed=29, ptype=29))))
-assert badges(T2) == [(1,'1a'),(2,'1b')] and T2.characterCount == 2; ok('solo Lazarus continue: other form frozen, numbers and letters stable, still two characters')
+assert listed(T2) == [(1,'1a','B1',False),(2,'1b','B2',False)] and T2.characterCount == 2; ok('solo Lazarus continue: other form frozen, numbers and letters stable, still two characters')
 run(T2, L((0, P({1:1,3:1}, seed=77))))  # a new character in the same seat gets the next free number
 assert entries(T2)[-1] == (3,1,'B2',False); ok('restore keeps the next free number past saved ones')
 # co-op with Tainted Lazarus as P1: the duo's number is reserved from the run's start
@@ -95,13 +95,13 @@ T = start(); T.update(L((0, P({1:1}, seed=29, ptype=29)), (1, P({5:1}, seed=50))
 assert badges(T) == [(1,'1a'),(5,'2')]; ok('co-op Tainted Lazarus + Isaac at the start: 1a and 2')
 g.floorName = 'B2'
 run(T, L((0, P({2:1}, seed=38, ptype=38)), (1, P({5:1}, seed=50))))
-assert badges(T) == [(1,'1a'),(5,'2'),(2,'1b')] and owners(T) == [29,50,38] and T.characterCount == 3; ok('co-op Lazarus flip: Dead Tainted Lazarus 1b, Isaac stays 2')
+assert listed(T) == [(1,'1a','B1',False),(5,'2','B1',False),(2,'1b','B2',False)] and owners(T) == [29,50,38] and T.characterCount == 3; ok('co-op Lazarus flip: Dead Tainted Lazarus 1b, Isaac stays 2')
 g.floorName = 'B3'
 run(T, L((0, P({1:1,3:1}, seed=29, ptype=29)), (1, P({5:1}, seed=50))))
 assert entries(T) == [(1,0,'B1',False),(5,1,'B1',False),(2,0,'B2',False),(3,0,'B3',False)] and owners(T) == [29,50,38,29]; ok('co-op Lazarus flip back: re-matched, no duplicates')
 T2 = fresh(); T2.restore(*T.serialize())
 run(T2, L((0, P({1:1,3:1}, seed=29, ptype=29)), (1, P({5:1}, seed=50))))
-assert badges(T2) == [(1,'1a'),(5,'2'),(2,'1b'),(3,'1a')]; ok('continue with the other Lazarus form absent: its entries kept (frozen, saved kind kept), letters kept')
+assert listed(T2) == [(1,'1a','B1',False),(5,'2','B1',False),(2,'1b','B2',False),(3,'1a','B3',False)]; ok('continue with the other Lazarus form absent: its entries kept (frozen, saved kind kept), letters kept')
 run(T2, L((0, P({1:1,3:1}, seed=29, ptype=29))))
 assert entries(T2) == [(1,0,'B1',False),(2,0,'B2',False),(3,0,'B3',False)]; assert gone(T2) == [(5,1,'B1',False)]; ok('co-op leave (count drops): the leaver is marked left, not swapped')
 T = fresh(); restore(T, [1], ['B1'], [29], [lua.table_from({'key': 29, 'number': 0})])
@@ -847,6 +847,8 @@ play(T, form(I0, 0, 1), p2join()); play(T, form(I0, 0, 1), p2join(), summon(SE2,
 replay(T, 'player 2 joining beside the temporary Esau is character 3; the next temporary Esau takes the free 2', (I0, 0, False, (1,)), (P2, 2, False, (9,)), (SE2, 1, False, (4,)), label='')
 
 # Not observed in game: guards for the design.
+T = fresh(); play(T, form(JK, 19, 1), form(EK, 20, 2)); play(T, form(JK, 19, 1), form(EK, 20, 2), form(952, 20, 3))
+check('another Esau beside a duo (no Parent): own number 2, the duo keeps 1a and 1b', sorted(badges(T)) == [(1,'1a'),(2,'1b'),(3,'2')], badges(T))
 T = esau_setup()
 play(T, form(B, 29, *esau), P({}, seed=50))
 play(T, P({}, seed=B, ptype=29, ghost=True), P({}, seed=50))
@@ -908,12 +910,12 @@ replay(T, 'Birthright pair returns by Esau Jr.: F2 stored, not left', (C, 0, Fal
 play(T, form(F2, 29, 6, EJ))  # C presses copy 1: F2 returns, the count drops
 replay(T, '... and F2 returns: C and D stored with their items, nothing merged', (C, 0, True, (1, BR, EJ)), (D, 0, True, (2,)), (DJ, 1, True, (3, EJ)), (F2, 2, False, (6, EJ)), label='')
 
-# Item matching after a Continue (GetData wiped): a returning character takes the saved key on its seed whose owned items equal its own (user decision 2026-11-23)
+# Item matching after a Continue (GetData wiped): a returning character takes the saved key on its seed whose owned items equal its own
 def g9(T):  # Isaac presses copy 1 -> A; A drops copy 1 and presses copy 2 -> B; saved with B playing
     play(T, form(I0, 0, 1, EJ)); play(T, form(IA, 0, 2, EJ)); play(T, form(IA, 0, 2)); play(T, form(IA, 0, 2, EJ)); play(T, form(IB, 0, 3, EJ))
 T = fresh(); g9(T); T = roundtrip(T); play(T, form(IB, 0, 3, EJ))
 play(T, form(I0, 0, 1, EJ))  # B picks up copy 1 and presses: Isaac returns
-replay(T, 'G9: Isaac returning through copy 1 after a continue keeps character 1', (I0, 0, False, (1, EJ)), (IA, 1, True, (2, EJ)), (IB, 2, True, (3, EJ)), label='')
+replay(T, 'Isaac returning through copy 1 after a continue keeps character 1', (I0, 0, False, (1, EJ)), (IA, 1, True, (2, EJ)), (IB, 2, True, (3, EJ)), label='')
 T = fresh(); g9(T); ids, floors, owners_, rws, _ = T.serialize(); T = fresh(); T.restore(ids, floors, owners_, rws, None)
 play(T, form(IB, 0, 3, EJ)); play(T, form(I0, 0, 1, EJ))
 check('pre-2.8 save (no item kinds): no matching, Isaac returns as a new character 4 as before', sorted(r[:2] for r in rows(T)) == [(I0, 0), (IA, 1), (IB, 2), (I0 + 2**32, 3)], rows(T))
@@ -925,7 +927,7 @@ play(T, form(B, 38, 5, FL, EJ))  # Lazarus Jr. flips to Dead Lazarus
 play(T, form(DLJ, 38, 7, FL, EJ))  # Dead Lazarus presses Esau Jr.: Dead Lazarus Jr., character 3
 T = roundtrip(T); play(T, form(DLJ, 38, 7, FL, EJ))
 play(T, form(B, 29, 6, FL, EJ, ent='LJ'))  # Dead Lazarus Jr. flips to Lazarus Jr.
-replay(T, 'G7: Lazarus Jr. back after a continue stays character 2', (A, 0, True, (4, FL, EJ)), (B, 0, True, (5, FL, EJ)), (LJ, 1, False, (6, FL, EJ)), (DLJ, 2, True, (7, FL, EJ)), label='')
+replay(T, 'Lazarus Jr. back after a continue stays character 2', (A, 0, True, (4, FL, EJ)), (B, 0, True, (5, FL, EJ)), (LJ, 1, False, (6, FL, EJ)), (DLJ, 2, True, (7, FL, EJ)), label='')
 play(T, form(B, 38, 5, FL, EJ))
 replay(T, '... then Dead Lazarus stays 1b and keeps c5', (A, 0, True, (4, FL, EJ)), (B, 0, False, (5, FL, EJ)), (LJ, 1, True, (6, FL, EJ)), (DLJ, 2, True, (7, FL, EJ)), label='')
 T = esau_setup(); play(T, form(B, 29, *esau, BR), form(B, 38, FL, ent='twin'))
@@ -943,4 +945,21 @@ replay(T, '... A returning through copy 2 keeps character 2', (I0, 0, True, (1, 
 # Jacob pressing Esau Jr.: Jacob Jr. is a new character with its own number, not Esau's twin
 T = fresh(); play(T, form(JK, 19, 1, EJ), form(EK, 20, 2)); play(T, form(950, 19, 3, EJ), form(EK, 20, 2))
 check('Jacob Jr.: own number 2, Jacob stored as 1a, Esau 1b', sorted(badges(T)) == [(1, '1a'), (2, '1b'), (3, '2'), (EJ, '1a'), (EJ, '2')], badges(T))
+T = fresh()
+play(T, form(A, 29, 4, FL, EJ)); play(T, form(B, 38, FL, EJ))
+play(T, form(A, 29, 4, FL, EJ)); play(T, form(B, 29, FL, EJ, ent='LJ'))
+play(T, form(B, 38, FL, EJ)); play(T, form(DLJ, 38, 7, FL, EJ))
+T = roundtrip(T); play(T, form(DLJ, 38, 7, FL, EJ)); play(T, form(B, 29, FL, EJ, ent='LJ'))
+replay(T, 'same items on one seed: Lazarus Jr. back after a continue is told from Dead Lazarus by its type, stays character 2', (A, 0, True, (4, FL, EJ)), (B, 0, True, (FL, EJ)), (LJ, 1, False, (FL, EJ)), (DLJ, 2, True, (7, FL, EJ)), label='')
+cain_form = lambda seed, *ids: pl({i: 1 for i in ids}, {5: 1}, seed, 2)  # Cain with an innate copy of item 5
+T = fresh(); play(T, cain_form(I0, 1, EJ)); play(T, cain_form(IA, 2, EJ)); play(T, cain_form(IA, 2)); play(T, cain_form(IA, 2, EJ)); play(T, cain_form(IB, 3, EJ))
+T = roundtrip(T); play(T, cain_form(IB, 3, EJ)); play(T, cain_form(I0, 1, EJ))
+check('Cain returning through copy 1 after a continue keeps character 1: his innate copy is not counted as owned', sorted(r[:2] for r in rows(T)) == [(I0, 0), (IA, 1), (IB, 2)], rows(T))
+T = fresh(); play(T, form(I0, 0, 1), summon(SE, 2, 3)); T = roundtrip(T)
+play(T, form(I0, 0, 1), summon(SE, 2, 3)); play(T, form(I0, 0, 1)); play(T, form(I0, 0, 1), p2join())
+replay(T, 'temporary Esau present after a continue leaves, then player 2 joins: character 2', (I0, 0, False, (1,)), (P2, 1, False, (9,)), label='')
+T = fresh(); restore(T, [1, 2], ['B1'] * 2, [JO, EO], [grow(JO, 0, 0), grow(EO, 1, 0)], [False, False])
+run(T, L((0, P({1:1, EJ:1}, seed=JO, ptype=19, ctrl=0)), (1, P({2:1}, seed=EO, ptype=20, ctrl=0))))
+run(T, L((0, P({3:1, EJ:1}, seed=951, ptype=19, ctrl=0)), (1, P({2:1}, seed=EO, ptype=20, ctrl=0))))
+check("save before twin letters: Jacob Jr. gets its own number 3, not Esau's twin", sorted(badges(T)) == [(1,'1'),(2,'2'),(3,'3'),(EJ,'1'),(EJ,'3')], badges(T))
 assert not failed, failed

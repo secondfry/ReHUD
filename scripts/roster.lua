@@ -47,8 +47,8 @@ local summoned = {} -- keys of Soul of Jacob and Esau's Esaus
 -- Twins (CONTEXT.md Duo, Twin; user decisions 2026-11-23): the two characters of a duo share one character number and carry a twin letter, Jacob and Tainted Lazarus a, Esau and Dead Tainted Lazarus b.
 -- A newcomer joins as twin a character of its group playing the other type of its duo that holds its number alone: Esau beside Jacob (run start, Clicker into Jacob and Esau),
 -- a Dead form by Flip or Birthright beside its Tainted Lazarus. A Tainted Lazarus first seen alone reserves its number and letter for the Dead form's first Flip.
--- An Esau Jr. character is a new character with its own number and no letter, also an Esau Jr. character of Tainted Lazarus: its observed Flip partners (the original's Dead form,
--- a Dead Lazarus Jr.) are characters with their own numbers (in-game 2026-11-22); only a Flip that brings a new character (unobserved for an Esau Jr. character) makes it a duo.
+-- Not put to the user, read from CONTEXT.md Duo: an Esau Jr. character is a new character with its own number and no letter, also an Esau Jr. character of Tainted Lazarus: its observed Flip partners (the original's Dead form,
+-- a Dead Lazarus Jr.) are characters with their own numbers (in-game 2026-11-22); only a Birthright twin, or a Flip that brings a new character (unobserved for an Esau Jr. character), makes it a duo.
 -- A merge (Clicker, ChangePlayerType) leaves the survivor alone with the plain number, and a later twin joins it again. The Forgotten and his Soul are one character, no duo.
 local twinLetter = {} -- "a" or "b" by key; nil for a character outside a duo, or merged out of one
 local DUO_TYPE = { [PlayerType.PLAYER_JACOB] = PlayerType.PLAYER_ESAU, [PlayerType.PLAYER_ESAU] = PlayerType.PLAYER_JACOB,
@@ -66,15 +66,15 @@ end
 -- Whether a tag stays with its character through a Tainted Lazarus Flip, or with each Birthright twin apart, is unobserved; the same-seed Flip and twin cases rely on it.
 -- The tag holds a token renewed by Roster.reset, so a tag from an earlier run or session never counts (whether one survives a new run is unobserved).
 -- Exit & Continue wipes GetData (in-game 2026-11-22), and every character comes back with its own items (in-game 2026-11-22), so after a Continue a character takes the saved key
--- on its seed whose owned items at the save equal its GetCollectibleNum(id, true) counts: the only such key, else the only one of those saved with its player type (user decision 2026-11-23).
+-- on its seed whose owned items at the save equal its GetCollectibleNum(id, true) counts: the only such key, else the only one of those saved with its player type.
 -- Failing that, the first character playing on a seed takes the key saved as live (not stored, not left) on it,
 -- keeping its character N (user decision 2026-11-22): the game brings back the character playing at the save.
--- A saved stored key not yet handed out waits for its own character: a fresh Esau Jr. form on its seed (a newcomer holding Esau Jr. in its presser's place) is a new character
+-- A saved stored key not yet handed out, and not matched by items, waits for its own character: a fresh Esau Jr. form on its seed (a newcomer holding Esau Jr. in its presser's place) is a new character
 -- with a new character N, unless the key's saved Esau Jr. link is that presser (user decision 2026-11-22); a Flip or any other arrival may take it.
 -- ReHUD saves only on exit (MC_PRE_GAME_EXIT), so after a crash the character numbers are those of the last exit; what the game restores after a crash is unobserved.
--- shortcut: matching leaves the rule above to decide for characters on one seed with identical owned items and type, items changed shortly before exit (the save holds the last scan),
+-- shortcut: matching leaves the rule above to decide for characters on one seed with identical owned items and type, items changed shortly before exit (the save holds the last scan), a learned innate count above what the engine still grants (see the innate shortcut:),
 -- and a returning character whose items are not yet in place on its first update (unobserved, pending an in-game check); two characters may then swap character numbers,
--- or one returning through an Esau Jr. copy whose saved link names another gets a new character N; check the items' timing in game if that gets reported.
+-- or one returning through an Esau Jr. copy whose saved link names another gets a new character N; a fresh Esau Jr. character holding exactly a stored one's saved items takes that one's character N, and the stored one gets a new one when it returns (in play a fresh character holds the copy it was made with, while the copy a stored character used left with the next character, so this needs a stored one holding another Esau Jr. copy); check the items' timing in game if that gets reported.
 local SEED_SPAN = 1 << 32
 local session, tagged = {}, {} -- this session's tag token; keys handed out this session
 local liveAtSave = {} -- by seed, the keys of the saved rows that were live at the save
