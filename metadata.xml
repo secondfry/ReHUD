@@ -19,7 +19,7 @@ Adds a more customizable smaller version of the &quot;Extra HUD&quot;, which dis
 - [b]Co-op and Jacob and Esau[/b]: lists every character's items, grouped by player within each floor and marked with a character number when there is more than one; Jacob and Esau share one number as 1a and 1b, and so do Tainted Lazarus and Dead Tainted Lazarus. Items of players who leave stay hidden unless [b]Show items of players who left[/b] is on.
 
 [h1]Unfixable in vanilla[/h1]
-- Esau Jr.: after Exit and Continue, two stored characters with the same items may swap character numbers.
+- Esau Jr.: after Exit and Continue, characters it stored may swap or change character numbers.
 
 [h1]Features of original[/h1]
 - [b]Display your last collected items on the screen[/b]. over 100 of them instead of the last 10 in the normal game.
